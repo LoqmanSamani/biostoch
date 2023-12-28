@@ -1,0 +1,7 @@
+Change Log
+==========
+0.0.1 (28/12/2023)
+-----------------
+- The first release of BioStoch library.
+
+
