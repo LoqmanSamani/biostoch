@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
 # ODE Simulation of Simple Chemical Reaction System:
 # 
 #  - simulate a simple system using ordinary differential equations(ODE) with just two   species 
@@ -8,8 +5,6 @@
 # The system:
 #      - Forward_reaction =  A --> B,  rate_constant = k1, rate_equation = k1 * A
 #      - Reverse_reaction =  B --> A,  rate_constant = k2, rate_equation = k2 * B
-
-# In[30]:
 
 
 import numpy as np
