@@ -5,6 +5,11 @@ import pandas as pd
 
 class Model(object):
 
+    def __init__(self, signs=None):
+
+        if not signs:
+            self.signs = ["+", "->", "*", "-"]
+
     def parameters(self, params):
         """
         params: A dictionary containing all rate constants in the system.
@@ -16,19 +21,46 @@ class Model(object):
         for key, val in params.items():
             setattr(self, key, val)
 
-    def species(self, components):
+    def species(self, components, rate_change):
 
         """
         components: A dictionary containing all species in the system.
                    Each key represents a specie (e.g. A, B, ...), and
                    each corresponding value represents the initial concentration.
+        rate_change: A dictionary containing rate of change for each component.
         """
+
         setattr(self, "components", list(components.keys()))
 
         for key, val in components.items():
             setattr(self, key, val)
 
-    def reactions(self, reacts, rates):
+        ROC_ = dict()
+        for key, val in rate_change.items():
+
+            roc = []
+            val = val.replace('+', ' + ').replace('->', ' -> ').replace('*', ' * ').replace('-', ' - ')
+            val = val.split()
+
+            for v in val:
+                if v in self.components or v in self.params:
+                    roc.append("self." + v)
+
+                elif v in self.signs:
+                    roc.append(v)
+                else:
+                    try:
+                        roc.append(float(v))
+                    except ValueError:
+                        print(f"This part of the ROC-equation ({v}) is not valid!")
+
+            roc = " ".join([str(r) for r in roc])
+
+            ROC_[key] = roc
+
+        setattr(self, "ROC_", ROC_)
+
+    def reactions(self, reacts, rates=None):
         """
         reactions: A dictionary containing reaction equations for each reaction.
                    Each key represents the reaction name, and each value represents the reaction equation.
@@ -40,7 +72,10 @@ class Model(object):
                exp:
                    {reaction1: "K1 * A * B", ...}
         """
-        signs = ["+", "->", "*"]
+        if not self.params or not self.components:
+            raise ("Please, first define Species and Parameters, then Reactions!")
+
+        reacts_ = dict()
 
         for reaction, formula in reacts.items():
             react = []
@@ -49,8 +84,8 @@ class Model(object):
 
             for component in components:
                 if component in self.components or component in self.params:
-                    react.append('[self.' + component + ']')
-                elif component in signs:
+                    react.append("self." + component)
+                elif component in self.signs:
                     react.append(component)
                 else:
                     try:
@@ -58,29 +93,156 @@ class Model(object):
                     except ValueError:
                         print(f"This component {component} is not valid!")
 
-            reaction_equation = ' '.join(str(r) for r in react)
-            setattr(self, reaction, reaction_equation)
+            react = " ".join([str(r) for r in react])
+            reacts_[reaction] = [react]
 
-        for reaction, rate in rates.items():
-            rate_equation = []
-            rate_eq = rate.replace('*', ' * ').replace('+', ' + ').replace('->', ' -> ')
-            components = rate_eq.split()
+        setattr(self, "reacts_", reacts_)
 
-            for component in components:
-                if component in self.components or component in self.params:
-                    rate_equation.append('[self.' + component + ']')
-                elif component in signs:
-                    rate_equation.append(component)
-                else:
-                    try:
-                        rate_equation.append(float(component))
-                    except ValueError:
-                        print(f"This component {component} is not valid!")
+        if rates:
 
-            rate_equation1 = ' '.join(str(r) for r in rate_equation)
-            setattr(self, reaction + "_rate", rate_equation1)
+            rates_ = dict()
+
+            for reaction, rate in rates.items():
+                rate_equation = []
+                rate_eq = rate.replace('*', ' * ').replace('+', ' + ').replace('->', ' -> ')
+                components = rate_eq.split()
+
+                for component in components:
+                    if component in self.components or component in self.params:
+                        rate_equation.append("self." + component)
+                    elif component in self.signs:
+                        rate_equation.append(component)
+                    else:
+                        try:
+                            rate_equation.append(float(component))
+                        except ValueError:
+                            print(f"This component {component} is not valid!")
+
+                rate_equation = " ".join([str(rate) for rate in rate_equation])
+
+                try:
+                    if reaction in self.reacts_.keys():
+                        rates_[reaction] = rate_equation
+                except ValueError:
+                    print("Reactions and rates do not match!")
+
+        setattr(self, "rates_", rates_)
 
 
-class SSA(Model):
-    pass
+class ODE(object):
+    def __init__(self, model=None, start=0, stop=10, epochs=1000, seed=42, **kwargs):
+
+        self.model = model
+        self.start = start
+        self.stop = stop
+        self.epochs = epochs
+        self.seed = seed
+
+        if self.model:
+            model_attributes = vars(self.model)
+            self.__dict__.update(model_attributes)
+
+        self.species = None
+        self.parameters = None
+
+    def param_init(self, model, start, stop, epochs):
+
+        species = {}
+        parameters = {}
+        species["Time"] = np.linspace(start, stop, epochs)
+
+        for specie in model.components:
+            species[specie] = np.zeros(epochs)
+            species[specie][0] = getattr(model, specie)
+        for parameter in self.model.params:
+            parameters[parameter] = getattr(model, parameter)
+
+        return species, parameters
+
+    def der_species(self, model):
+
+        der_sp = {}
+        for specie, rate in model.ROC_.items():
+            der_sp[specie] = eval(rate)
+
+        return der_sp
+
+
+    def simulate(self):
+
+        species, parameters = self.param_init(
+            model=self.model,
+            start=self.start,
+            stop=self.stop,
+            epochs=self.epochs
+        )
+
+        der_sp = self.der_species(model=self.model)
+
+        dt = species["Time"][3] - species["Time"][2]
+
+        for i in range(1, self.epochs):
+            for specie in species.keys():
+                if specie != "Time":
+                    species[specie][i] = species[specie][i - 1] + (der_sp[specie] * dt)
+
+        self.species = species
+        self.parameters = parameters
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+m = Model()
+m.parameters({"K1": 3, "K2": 5})
+
+m.species({"A": 1, "B": 100, "C": 5}, {"A": "-2*A*K1", "B": "-3*B+4*A*K2", "C":"-C"})
+
+m.reactions({"reaction1": "A + B -> C", "reaction2": "C -> A + B"},
+           {"reaction1": "2.0 * A * B", "reaction2": "4.0*C"})
+
+
+print("Parameters: ", m.params)
+print("Species: ", m.components)
+print("Rate of Reactions: ", m.rates_)
+print("Reactions: ", m.reacts_)
+print("Rate of Changes:", m.ROC_)
+
+
+
+print("K1: ", m.K1)
+print("K2: ", m.K2)
+
+print("A: ", m.A)
+print("B: ", m.B)
+print("C: ", m.C)
+
+s= ODE(m)
+
+s.simulate()
+
+print(s.species)
+print(s.parameters)
+print(s.components)
+print(s.params)
+
+
+
 
