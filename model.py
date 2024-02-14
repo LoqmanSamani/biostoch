@@ -16,7 +16,8 @@ class Model(object):
                 Each key represents a rate constant (e.g., K1, K2, ..., Kn),
                 and each corresponding value represents the value of that rate constant.
         """
-        setattr(self, "params", list(params.keys()))
+        self.params = params
+        setattr(self, "param_names", list(params.keys()))
 
         for key, val in params.items():
             setattr(self, key, val)
@@ -43,7 +44,7 @@ class Model(object):
             val = val.split()
 
             for v in val:
-                if v in self.components or v in self.params:
+                if v in self.components or v in self.params.keys():
                     roc.append("self." + v)
 
                 elif v in self.signs:
@@ -62,16 +63,18 @@ class Model(object):
 
     def reactions(self, reacts, rates=None):
         """
-        reactions: A dictionary containing reaction equations for each reaction.
+        reactions: A dictionary containing reaction equation for each reaction.
                    Each key represents the reaction name, and each value represents the reaction equation.
                    exp:
-                       {reaction1: "A + B -> C", ...}
+                       {"reaction1": "A + B -> C", ...}
 
         rates: A dictionary containing rate equations (or propensity functions) for each reaction.
                Each key represents the reaction name, and each value represents the rate equation of that reaction.
                exp:
                    {reaction1: "K1 * A * B", ...}
         """
+        setattr(self, "react_names", list(reacts.keys()))
+
         if not self.params or not self.components:
             raise ("Please, first define Species and Parameters, then Reactions!")
 
@@ -84,7 +87,7 @@ class Model(object):
 
             for component in components:
                 if component in self.components or component in self.params:
-                    react.append("self." + component)
+                    react.append(component)
                 elif component in self.signs:
                     react.append(component)
                 else:
@@ -94,7 +97,7 @@ class Model(object):
                         print(f"This component {component} is not valid!")
 
             react = " ".join([str(r) for r in react])
-            reacts_[reaction] = [react]
+            reacts_[reaction] = react
 
         setattr(self, "reacts_", reacts_)
 
@@ -109,7 +112,7 @@ class Model(object):
 
                 for component in components:
                     if component in self.components or component in self.params:
-                        rate_equation.append("self." + component)
+                        rate_equation.append(component)
                     elif component in self.signs:
                         rate_equation.append(component)
                     else:
@@ -190,6 +193,131 @@ class ODE(object):
         self.parameters = parameters
 
 
+class SSA(object):
+    def __init__(self, model=None, start=0, stop=10, epochs=None, max_epochs=None, seed=42, alpha=100, **kwargs):
+
+        self.model = model
+        self.start = start
+        self.stop = stop
+        self.epochs = epochs
+        self.max_epochs = max_epochs
+        self.seed = seed
+        self.alpha = alpha
+
+        if self.model:
+            model_attributes = vars(self.model)
+            self.__dict__.update(model_attributes)
+
+        self.species = None
+        self.parameters = None
+
+    def param_init(self, model, start, stop, max_epochs, alpha):
+
+        species = {}
+        parameters = {}
+
+        if max_epochs:
+            epochs = max_epochs
+        else:
+            epochs = (stop - start) * alpha
+
+        species["Time"] = np.zeros(epochs)
+        species["Time"][0] = start
+        for specie in model.components:
+            species[specie] = np.zeros(epochs)
+            species[specie][0] = getattr(model, specie)
+        for parameter in self.model.params:
+            parameters[parameter] = getattr(model, parameter)
+
+        return species, parameters
+
+    def propensity_sum(self, step, propensities, species, params):
+
+        propensity_sum = 0.0
+        props = {}
+        last_step = {}
+        for key, val in species.items():
+            last_step[key] = val[step]
+        for key, val in params.items():
+            last_step[key] = val
+
+        for reaction, propensity in propensities.items():
+            propensity = eval(propensity, last_step)
+            propensity_sum += propensity
+            props[reaction] = propensity
+
+        return propensity_sum, props
+
+    def simulate(self):
+
+        num_reacts = len(self.model.reacts_)
+
+        species, parameters = self.param_init(
+            model=self.model,
+            start=self.start,
+            stop=self.stop,
+            max_epochs=self.max_epochs,
+            alpha=self.alpha
+        )
+
+        step = 0
+        ind = 1
+        while species["Time"][-1] < self.stop:
+
+            a_sum, props = self.propensity_sum(
+                step=step,
+                propensities=self.model.rates_,
+                species=species,
+                params=parameters
+            )
+
+            tau = np.random.exponential(scale=1/a_sum)
+            rand = np.random.uniform(low=0, high=1)
+
+            react = tau * rand
+            for i in range(num_reacts):
+                react_name = self.model.react_names[i]
+                if i == 0:
+                    if react <= props[react_name]:
+                        sp = self.model.reacts_[react_name].split()
+                        index = [index for index, value in enumerate(sp) if value == '->']
+                        for j in range(index[0]):
+                            if sp[j] in self.model.components:
+                                species[sp[j]][ind] = species[sp[j]][ind-1] + 1
+                        for k in range(index[0], len(sp)):
+                            if sp[k] in self.model.components:
+                                species[sp[k]][ind] = species[sp[k]][ind-1] - 1
+                    else:
+                        pass
+                    
+
+
+
+
+
+
+
+
+
+
+
+                   #elif react > props[i] and react <= np.sum(props[:i+1])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -224,7 +352,8 @@ print("Species: ", m.components)
 print("Rate of Reactions: ", m.rates_)
 print("Reactions: ", m.reacts_)
 print("Rate of Changes:", m.ROC_)
-
+print("param names", m.param_names)
+print("react names", m.react_names)
 
 
 print("K1: ", m.K1)
@@ -234,14 +363,23 @@ print("A: ", m.A)
 print("B: ", m.B)
 print("C: ", m.C)
 
-s= ODE(m)
+model = SSA(m)
+print(model.A)
+print(model.B)
 
-s.simulate()
+s, p = model.simulate()
+print(s)
+print(p)
+print(len(s))
+print(len(s["A"]))
+#s= ODE(m)
 
-print(s.species)
-print(s.parameters)
-print(s.components)
-print(s.params)
+#s.simulate()
+
+#print(s.species)
+#print(s.parameters)
+#print(s.components)
+#print(s.params)
 
 
 
