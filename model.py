@@ -194,7 +194,7 @@ class ODE(object):
 
 
 class SSA(object):
-    def __init__(self, model=None, start=0, stop=10, epochs=None, max_epochs=None, seed=42, alpha=100, **kwargs):
+    def __init__(self, model=None, start=0, stop=10, epochs=None, max_epochs=1000, seed=42, alpha=100, steady_state=None, **kwargs):
 
         self.model = model
         self.start = start
@@ -203,6 +203,7 @@ class SSA(object):
         self.max_epochs = max_epochs
         self.seed = seed
         self.alpha = alpha
+        self.steady_state = steady_state
 
         if self.model:
             model_attributes = vars(self.model)
@@ -248,9 +249,12 @@ class SSA(object):
 
         return propensity_sum, props
 
-    def simulate(self):
+    def resize_species(self, species, final_step):
+        for key in species.keys():
+            species[key] = species[key][:final_step]
+        return species
 
-        num_reacts = len(self.model.reacts_)
+    def simulate(self):
 
         species, parameters = self.param_init(
             model=self.model,
@@ -260,9 +264,160 @@ class SSA(object):
             alpha=self.alpha
         )
 
-        step = 0
+        step = 1
         ind = 1
-        while species["Time"][-1] < self.stop:
+        while species["Time"][-1] < self.stop and step < self.max_epochs:
+
+            a_sum, props = self.propensity_sum(
+                step=step,
+                propensities=self.model.rates_,
+                species=species,
+                params=parameters
+            )
+            if a_sum == 0 and self.steady_state:
+                print(f"Simulation reached steady state (iteration: {step}). No further changes are occurring.")
+                break
+
+            tau = np.random.exponential(scale=1 / (a_sum + 1e-18))
+            species["Time"][step] = tau + species["Time"][step-1]
+            rand = np.random.uniform(low=0, high=1)
+            num_reacts = len(self.model.reacts_)
+            react = tau * rand
+
+            for i in range(num_reacts):
+                react_name = self.model.react_names[i]
+                if i == 0:
+                    if react <= props[react_name]:
+                        sp = self.model.reacts_[react_name].split()
+                        index = [index for index, value in enumerate(sp) if value == '->']
+                        if len(index) > 1:
+                            print(f"Each reaction should have exactly one '->', but there are more than one in the {react_name}.")
+
+                        comp = []
+                        for j in range(index[0]):
+                            if sp[j] in self.model.components:
+                                comp.append(sp[j])
+                                species[sp[j]][ind] = species[sp[j]][ind-1] + 1
+                        for k in range(index[0]+1, len(sp)):
+                            if sp[k] in self.model.components:
+                                comp.append(sp[k])
+                                species[sp[k]][ind] = species[sp[k]][ind-1] - 1
+                        for sps in species.keys():
+                            if sps not in comp:
+                                species[sps][ind] = species[sps][ind-1]
+
+                else:
+
+                    keys_to_sum = self.model.react_names[:i+1]
+                    sum_props = sum(props[key] for key in keys_to_sum)
+                    if react > props[react_name] and react <= sum_props:
+                        sp = self.model.reacts_[react_name].split()
+                        index = [index for index, value in enumerate(sp) if value == '->']
+                        if len(index) > 1:
+                            print(f"Each reaction should have exactly one '->', but there are more than one in the {react_name}.")
+
+                        comp = []
+                        for j in range(index[0]):
+                            if sp[j] in self.model.components:
+                                comp.append(sp[j])
+                                species[sp[j]][ind] = species[sp[j]][ind - 1] + 1
+                        for k in range(index[0] + 1, len(sp)):
+                            if sp[k] in self.model.components:
+                                comp.append(sp[k])
+                                species[sp[k]][ind] = species[sp[k]][ind - 1] - 1
+                        for sps in species.keys():
+                            if sps not in comp:
+                                species[sps][ind] = species[sps][ind - 1]
+
+            step += 1
+            ind += 1
+            if step >= len(species["Time"]):
+
+                new_max_steps = len(species["Time"]) * 2
+
+                for key, val in species.items():
+                    pad_width = (0, new_max_steps - len(val))
+                    species[key] = np.pad(val, pad_width, mode='constant')
+
+        species = self.resize_species(species, step)
+
+        self.species = species
+        self.parameters = parameters
+
+
+class TauLeaping(object):
+    def __init__(self, model=None, start=0, stop=10, epochs=None, max_epochs=100, seed=42, alpha=100, steady_state=None, **kwargs):
+
+        self.model = model
+        self.start = start
+        self.stop = stop
+        self.epochs = epochs
+        self.max_epochs = max_epochs
+        self.seed = seed
+        self.alpha = alpha
+        self.steady_state = steady_state
+
+        if self.model:
+            model_attributes = vars(self.model)
+            self.__dict__.update(model_attributes)
+
+        self.species = None
+        self.parameters = None
+
+    def param_init(self, model, start, stop, max_epochs, alpha):
+
+        species = {}
+        parameters = {}
+
+        if max_epochs:
+            epochs = max_epochs
+        else:
+            epochs = (stop - start) * alpha
+
+        species["Time"] = np.zeros(epochs)
+        species["Time"][0] = start
+        for specie in model.components:
+            species[specie] = np.zeros(epochs)
+            species[specie][0] = getattr(model, specie)
+        for parameter in self.model.params:
+            parameters[parameter] = getattr(model, parameter)
+
+        return species, parameters
+
+    def propensity_sum(self, step, propensities, species, params):
+
+        propensity_sum = 0.0
+        props = {}
+        last_step = {}
+        for key, val in species.items():
+            last_step[key] = val[step]
+        for key, val in params.items():
+            last_step[key] = val
+
+        for reaction, propensity in propensities.items():
+            propensity = eval(propensity, last_step)
+            propensity_sum += propensity
+            props[reaction] = propensity
+
+        return propensity_sum, props
+
+    def calculate_tau(self, a_sum):
+
+        tau = 1 / a_sum if a_sum > 0 else float('inf')
+        return tau
+
+    def simulate(self):
+
+        species, parameters = self.param_init(
+            model=self.model,
+            start=self.start,
+            stop=self.stop,
+            max_epochs=self.max_epochs,
+            alpha=self.alpha
+        )
+
+        step = 1
+        while species["Time"][-1] < self.stop and step < self.max_epochs:
 
             a_sum, props = self.propensity_sum(
                 step=step,
@@ -271,77 +426,24 @@ class SSA(object):
                 params=parameters
             )
 
-            tau = np.random.exponential(scale=1/a_sum)
-            rand = np.random.uniform(low=0, high=1)
+            tau = self.calculate_tau(a_sum=a_sum)
 
-            react = tau * rand
-            for i in range(num_reacts):
-                react_name = self.model.react_names[i]
-                if i == 0:
-                    if react <= props[react_name]:
-                        sp = self.model.reacts_[react_name].split()
-                        index = [index for index, value in enumerate(sp) if value == '->']
-                        for j in range(index[0]):
-                            if sp[j] in self.model.components:
-                                species[sp[j]][ind] = species[sp[j]][ind-1] + 1
-                        for k in range(index[0], len(sp)):
-                            if sp[k] in self.model.components:
-                                species[sp[k]][ind] = species[sp[k]][ind-1] - 1
-                    else:
-                        pass
-                    
+            # Update species counts based on tau and reaction rates
+            self.update_species(species, rates, tau)
 
+            step += 1
 
+            # Resize the species dictionary after the simulation
+            species = self.resize_species(species, step)
 
-
-
-
-
-
-
-
-
-                   #elif react > props[i] and react <= np.sum(props[:i+1])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-
-
-
-
-
+            self.species = species
+            self.parameters = parameters
 
 
 m = Model()
 m.parameters({"K1": 3, "K2": 5})
 
-m.species({"A": 1, "B": 100, "C": 5}, {"A": "-2*A*K1", "B": "-3*B+4*A*K2", "C":"-C"})
+m.species({"A": 100, "B": 100, "C": 500}, {"A": "-2*A*K1", "B": "-3*B+4*A*K2", "C":"-C"})
 
 m.reactions({"reaction1": "A + B -> C", "reaction2": "C -> A + B"},
            {"reaction1": "2.0 * A * B", "reaction2": "4.0*C"})
@@ -367,16 +469,14 @@ model = SSA(m)
 print(model.A)
 print(model.B)
 
-s, p = model.simulate()
-print(s)
-print(p)
-print(len(s))
-print(len(s["A"]))
-#s= ODE(m)
+model.simulate()
+#print(model.species)
+print(len(model.species["Time"]))
+s= ODE(m)
 
-#s.simulate()
+s.simulate()
 
-#print(s.species)
+print(s.species)
 #print(s.parameters)
 #print(s.components)
 #print(s.params)
