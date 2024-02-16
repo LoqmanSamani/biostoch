@@ -194,7 +194,8 @@ class ODE(object):
 
 
 class SSA(object):
-    def __init__(self, model=None, start=0, stop=10, epochs=None, max_epochs=1000, seed=42, alpha=100, steady_state=None, **kwargs):
+    def __init__(self, model=None, start=0, stop=10, epochs=None, max_epochs=1000,
+                 seed=42, alpha=100, steady_state=None, gamma=1e-18, **kwargs):
 
         self.model = model
         self.start = start
@@ -204,6 +205,7 @@ class SSA(object):
         self.seed = seed
         self.alpha = alpha
         self.steady_state = steady_state
+        self.gamma = gamma
 
         if self.model:
             model_attributes = vars(self.model)
@@ -238,7 +240,8 @@ class SSA(object):
         props = {}
         last_step = {}
         for key, val in species.items():
-            last_step[key] = val[step]
+            if key != "Time":
+                last_step[key] = val[step-1]
         for key, val in params.items():
             last_step[key] = val
 
@@ -248,6 +251,73 @@ class SSA(object):
             props[reaction] = propensity
 
         return propensity_sum, props
+
+    def calculate_dt(self, a_sum, gamma):
+
+        dt = np.random.exponential(scale=1 / (a_sum + gamma))
+
+        return dt
+
+    def update(self, species, model, react, num_reacts, props, step):
+
+        for i in range(num_reacts):
+            react_name = model.react_names[i]
+            if i == 0:
+                if react <= props[react_name]:
+                    sp = model.reacts_[react_name].split()
+                    index = [index for index, value in enumerate(sp) if value == '->']
+                    if len(index) > 1:
+                        print(f"Each reaction should have exactly one '->', but there are more than one in the {react_name}.")
+
+                    comp = []
+                    for j in range(index[0]):
+                        if sp[j] in model.components:
+                            comp.append(sp[j])
+                            species[sp[j]][step] = species[sp[j]][step - 1] + 1
+                    for k in range(index[0] + 1, len(sp)):
+                        if sp[k] in model.components:
+                            comp.append(sp[k])
+                            species[sp[k]][step] = species[sp[k]][step - 1] - 1
+                    for sps in species.keys():
+                        if sps not in comp:
+                            species[sps][step] = species[sps][step - 1]
+
+            else:
+
+                keys_to_sum = model.react_names[:i + 1]
+                sum_props = sum(props[key] for key in keys_to_sum)
+                if react > props[react_name] and react <= sum_props:
+                    sp = model.reacts_[react_name].split()
+                    index = [index for index, value in enumerate(sp) if value == '->']
+                    if len(index) > 1:
+                        print(f"Each reaction should have exactly one '->', but there are more than one in the {react_name}.")
+
+                    comp = []
+                    for j in range(index[0]):
+                        if sp[j] in model.components:
+                            comp.append(sp[j])
+                            species[sp[j]][step] = species[sp[j]][step - 1] + 1
+                    for k in range(index[0] + 1, len(sp)):
+                        if sp[k] in model.components:
+                            comp.append(sp[k])
+                            species[sp[k]][step] = species[sp[k]][step - 1] - 1
+                    for sps in species.keys():
+                        if sps not in comp:
+                            species[sps][step] = species[sps][step - 1]
+
+        return species
+
+    def change_size(self, species, step):
+
+        if step >= len(species["Time"]):
+
+            new_max_steps = len(species["Time"]) * 2
+
+            for key, val in species.items():
+                pad_width = (0, new_max_steps - len(val))
+                species[key] = np.pad(val, pad_width, mode='constant')
+
+        return species
 
     def resize_species(self, species, final_step):
         for key in species.keys():
@@ -265,8 +335,7 @@ class SSA(object):
         )
 
         step = 1
-        ind = 1
-        while species["Time"][-1] < self.stop and step < self.max_epochs:
+        while species["Time"][step-1] < self.stop and step-1 < self.max_epochs:
 
             a_sum, props = self.propensity_sum(
                 step=step,
@@ -278,75 +347,43 @@ class SSA(object):
                 print(f"Simulation reached steady state (iteration: {step}). No further changes are occurring.")
                 break
 
-            tau = np.random.exponential(scale=1 / (a_sum + 1e-18))
-            species["Time"][step] = tau + species["Time"][step-1]
+            dt = self.calculate_dt(
+                a_sum=a_sum,
+                gamma=self.gamma
+            )
+            species["Time"][step] = dt + species["Time"][step-1]
             rand = np.random.uniform(low=0, high=1)
             num_reacts = len(self.model.reacts_)
-            react = tau * rand
+            react = dt * rand
 
-            for i in range(num_reacts):
-                react_name = self.model.react_names[i]
-                if i == 0:
-                    if react <= props[react_name]:
-                        sp = self.model.reacts_[react_name].split()
-                        index = [index for index, value in enumerate(sp) if value == '->']
-                        if len(index) > 1:
-                            print(f"Each reaction should have exactly one '->', but there are more than one in the {react_name}.")
-
-                        comp = []
-                        for j in range(index[0]):
-                            if sp[j] in self.model.components:
-                                comp.append(sp[j])
-                                species[sp[j]][ind] = species[sp[j]][ind-1] + 1
-                        for k in range(index[0]+1, len(sp)):
-                            if sp[k] in self.model.components:
-                                comp.append(sp[k])
-                                species[sp[k]][ind] = species[sp[k]][ind-1] - 1
-                        for sps in species.keys():
-                            if sps not in comp:
-                                species[sps][ind] = species[sps][ind-1]
-
-                else:
-
-                    keys_to_sum = self.model.react_names[:i+1]
-                    sum_props = sum(props[key] for key in keys_to_sum)
-                    if react > props[react_name] and react <= sum_props:
-                        sp = self.model.reacts_[react_name].split()
-                        index = [index for index, value in enumerate(sp) if value == '->']
-                        if len(index) > 1:
-                            print(f"Each reaction should have exactly one '->', but there are more than one in the {react_name}.")
-
-                        comp = []
-                        for j in range(index[0]):
-                            if sp[j] in self.model.components:
-                                comp.append(sp[j])
-                                species[sp[j]][ind] = species[sp[j]][ind - 1] + 1
-                        for k in range(index[0] + 1, len(sp)):
-                            if sp[k] in self.model.components:
-                                comp.append(sp[k])
-                                species[sp[k]][ind] = species[sp[k]][ind - 1] - 1
-                        for sps in species.keys():
-                            if sps not in comp:
-                                species[sps][ind] = species[sps][ind - 1]
+            species = self.update(
+                species=species,
+                model=self.model,
+                react=react,
+                num_reacts=num_reacts,
+                props=props,
+                step=step
+            )
 
             step += 1
-            ind += 1
-            if step >= len(species["Time"]):
 
-                new_max_steps = len(species["Time"]) * 2
+            species = self.change_size(
+                species=species,
+                step=step
+            )
 
-                for key, val in species.items():
-                    pad_width = (0, new_max_steps - len(val))
-                    species[key] = np.pad(val, pad_width, mode='constant')
-
-        species = self.resize_species(species, step)
+        species = self.resize_species(
+            species=species,
+            final_step=step
+        )
 
         self.species = species
         self.parameters = parameters
 
 
 class TauLeaping(object):
-    def __init__(self, model=None, start=0, stop=10, epochs=None, max_epochs=100, seed=42, alpha=100, steady_state=None, **kwargs):
+    def __init__(self, model=None, start=0, stop=10, epochs=None, max_epochs=100,
+                 seed=42, alpha=100, steady_state=None, tau=None, epsilon=0.3, **kwargs):
 
         self.model = model
         self.start = start
@@ -356,6 +393,8 @@ class TauLeaping(object):
         self.seed = seed
         self.alpha = alpha
         self.steady_state = steady_state
+        self.tau = tau
+        self.epsilon = epsilon
 
         if self.model:
             model_attributes = vars(self.model)
@@ -390,7 +429,8 @@ class TauLeaping(object):
         props = {}
         last_step = {}
         for key, val in species.items():
-            last_step[key] = val[step]
+            if key != "Time":
+                last_step[key] = val[step-1]
         for key, val in params.items():
             last_step[key] = val
 
@@ -401,10 +441,74 @@ class TauLeaping(object):
 
         return propensity_sum, props
 
-    def calculate_tau(self, a_sum):
+    def calculate_tau(self, X, params, epsilon):
 
-        tau = 1 / a_sum if a_sum > 0 else float('inf')
+        eXi = epsilon * X
+        gi = max(params.values())
+        mu_X = sum(abs(rate) for rate in params.values())
+        sigma2_X = sum(rate ** 2 for rate in params.values())
+
+        tau1 = max(np.maximum(eXi / gi, 1) / np.abs(mu_X))
+        tau2 = max(np.maximum(eXi, gi) ** 2 / sigma2_X)
+        tau = min(tau1, tau2)
+
         return tau
+
+    def calculate_lambda(self, propensities, species, params, tau, step):
+
+        last_step = {}
+        for key, val in species.items():
+            if key != "Time":
+                last_step[key] = val[step-1]
+        for key, val in params.items():
+            last_step[key] = val
+
+        lambdas = {}
+        for react, prop in propensities.items():
+            lambdas[react] = eval(prop, last_step) * tau
+
+        return lambdas
+
+    def num_reacts(self, lambdas):
+        n_reacts = {}
+        for react, lam in lambdas.items():
+            n_reacts[react] = np.random.poisson(lam)
+
+        return n_reacts
+
+    def update(self, species, model, num_reacts, step):
+
+        for react, prop in model.reacts_.items():
+            split_prop = prop.split()
+            index = [index for index, value in enumerate(split_prop) if value == '->']
+            if len(index) > 1:
+                print(f"Each reaction should have exactly one '->', but there are more than one in the {react}.")
+
+            for i in range(index[0]):
+                if split_prop[i] in model.components:
+                    species[split_prop[i]][step] = species[split_prop[i]][step-1] + num_reacts[react]
+            for j in range(index[0], len(split_prop)):
+                if split_prop[j] in model.components:
+                    species[split_prop[j]][step] = species[split_prop[j]][step-1] - num_reacts[react]
+
+        return species
+
+    def change_size(self, species, step):
+
+        if step >= len(species["Time"]):
+
+            new_max_steps = len(species["Time"]) * 2
+
+            for key, val in species.items():
+                pad_width = (0, new_max_steps - len(val))
+                species[key] = np.pad(val, pad_width, mode='constant')
+
+        return species
+
+    def resize_species(self, species, final_step):
+        for key in species.keys():
+            species[key] = species[key][:final_step]
+        return species
 
     def simulate(self):
 
@@ -417,7 +521,7 @@ class TauLeaping(object):
         )
 
         step = 1
-        while species["Time"][-1] < self.stop and step < self.max_epochs:
+        while species["Time"][step-1] < self.stop and step-1 < self.max_epochs:
 
             a_sum, props = self.propensity_sum(
                 step=step,
@@ -426,18 +530,55 @@ class TauLeaping(object):
                 params=parameters
             )
 
-            tau = self.calculate_tau(a_sum=a_sum)
+            if a_sum == 0 and self.steady_state:
+                print(f"Simulation reached steady state (iteration: {step}). No further changes are occurring.")
+                break
 
-            # Update species counts based on tau and reaction rates
-            self.update_species(species, rates, tau)
+            if self.tau:
+                tau = self.tau
+            else:
+                X = np.array([species[con][step-1] for con in species.keys() if con != "Time"])
+
+                tau = self.calculate_tau(
+                    X=X,
+                    params=self.model.params,
+                    epsilon=self.epsilon
+                )
+
+            lambdas = self.calculate_lambda(
+                propensities=self.model.rates_,
+                species=species,
+                params=self.model.params,
+                tau=tau,
+                step=step
+            )
+            num_reacts = self.num_reacts(
+                lambdas=lambdas
+            )
+
+            species = self.update(
+                species=species,
+                model=self.model,
+                num_reacts=num_reacts,
+                step=step
+            )
 
             step += 1
 
-            # Resize the species dictionary after the simulation
-            species = self.resize_species(species, step)
+            species = self.change_size(
+                species=species,
+                step=step
+            )
 
-            self.species = species
-            self.parameters = parameters
+        species = self.resize_species(
+            species=species,
+            final_step=step
+        )
+
+        self.species = species
+        self.parameters = parameters
+
+
 
 
 m = Model()
@@ -465,18 +606,19 @@ print("A: ", m.A)
 print("B: ", m.B)
 print("C: ", m.C)
 
-model = SSA(m)
-print(model.A)
-print(model.B)
+model1 = SSA(m)
+print(model1.A)
+print(model1.B)
 
-model.simulate()
+model1.simulate()
+print("this is it ", model1.species)
 #print(model.species)
-print(len(model.species["Time"]))
-s= ODE(m)
+print(len(model1.species["Time"]))
+#s= ODE(m)
 
-s.simulate()
+#s.simulate()
 
-print(s.species)
+#print(s.species)
 #print(s.parameters)
 #print(s.components)
 #print(s.params)
