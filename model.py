@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import pandas as pd
+
 
 
 class Model(object):
@@ -45,7 +45,7 @@ class Model(object):
 
             for v in val:
                 if v in self.components or v in self.params.keys():
-                    roc.append("self." + v)
+                    roc.append(v)
 
                 elif v in self.signs:
                     roc.append(v)
@@ -166,10 +166,9 @@ class ODE(object):
 
         der_sp = {}
         for specie, rate in model.ROC_.items():
-            der_sp[specie] = eval(rate)
+            der_sp[specie] = rate
 
         return der_sp
-
 
     def simulate(self):
 
@@ -180,14 +179,27 @@ class ODE(object):
             epochs=self.epochs
         )
 
-        der_sp = self.der_species(model=self.model)
-
         dt = species["Time"][3] - species["Time"][2]
 
         for i in range(1, self.epochs):
+
+            der_sp = self.der_species(model=self.model)
+
             for specie in species.keys():
                 if specie != "Time":
-                    species[specie][i] = species[specie][i - 1] + (der_sp[specie] * dt)
+                    rate = ""
+                    split_rate = der_sp[specie].split()
+                    for s in split_rate:
+                        if s in self.model.params.keys():
+                            rate += " " + str(self.model.params[s])
+                        elif s in ["+", "-", "*", "/"]:
+                            rate += " " + s
+                        elif s in self.model.components:
+                            rate += " " + str(species[s][i-1])
+                        else:
+                            ValueError(f"There is a problem with your model ({s}).")
+
+                    species[specie][i] = species[specie][i - 1] + (eval(rate) * dt)
 
         self.species = species
         self.parameters = parameters
@@ -258,7 +270,9 @@ class SSA(object):
 
         return dt
 
-    def update(self, species, model, react, num_reacts, props, step):
+    def update(self, species, model, react, num_reacts, props, step, dt):
+
+        species["Time"][step] = species["Time"][step - 1] + dt
 
         for i in range(num_reacts):
             react_name = model.react_names[i]
@@ -351,7 +365,6 @@ class SSA(object):
                 a_sum=a_sum,
                 gamma=self.gamma
             )
-            species["Time"][step] = dt + species["Time"][step-1]
             rand = np.random.uniform(low=0, high=1)
             num_reacts = len(self.model.reacts_)
             react = dt * rand
@@ -362,7 +375,8 @@ class SSA(object):
                 react=react,
                 num_reacts=num_reacts,
                 props=props,
-                step=step
+                step=step,
+                dt=dt
             )
 
             step += 1
@@ -476,7 +490,9 @@ class TauLeaping(object):
 
         return n_reacts
 
-    def update(self, species, model, num_reacts, step):
+    def update(self, species, model, num_reacts, step, tau):
+
+        species["Time"][step] = species["Time"][step - 1] + tau
 
         for react, prop in model.reacts_.items():
             split_prop = prop.split()
@@ -560,6 +576,156 @@ class TauLeaping(object):
                 species=species,
                 model=self.model,
                 num_reacts=num_reacts,
+                step=step,
+                tau=tau
+            )
+
+            step += 1
+
+            species = self.change_size(
+                species=species,
+                step=step
+            )
+
+        species = self.resize_species(
+            species=species,
+            final_step=step
+        )
+
+        self.species = species
+        self.parameters = parameters
+
+
+class CLE(object):
+    def __init__(self, model=None, start=0, stop=10, epochs=None, max_epochs=None,
+                     seed=42, alpha=100, steady_state=None, tau=None, epsilon=0.3, **kwargs):
+
+        self.model = model
+        self.start = start
+        self.stop = stop
+        self.epochs = epochs
+        self.max_epochs = max_epochs
+        self.seed = seed
+        self.alpha = alpha
+        self.steady_state = steady_state
+        self.tau = tau
+        self.epsilon = epsilon
+
+        if self.model:
+            model_attributes = vars(self.model)
+            self.__dict__.update(model_attributes)
+
+        self.species = None
+        self.parameters = None
+
+    def param_init(self, model, start, stop, max_epochs, alpha):
+
+        species = {}
+        parameters = {}
+
+        if max_epochs:
+            epochs = max_epochs
+        else:
+            epochs = (stop - start) * alpha
+
+        species["Time"] = np.zeros(epochs)
+        species["Time"][0] = start
+        for specie in model.components:
+            species[specie] = np.zeros(epochs)
+            species[specie][0] = getattr(model, specie)
+        for parameter in self.model.params:
+            parameters[parameter] = getattr(model, parameter)
+
+        return species, parameters
+
+    def der_species(self, model):
+
+        der_sp = {}
+        for specie, rate in model.ROC_.items():
+            der_sp[specie] = eval(rate)
+
+        return der_sp
+
+    def compute_tau(self, X, params, epsilon):
+
+        eXi = epsilon * X
+        gi = max(params.values())
+        mu_X = sum(abs(rate) for rate in params.values())
+        sigma2_X = sum(rate ** 2 for rate in params.values())
+
+        tau1 = max(np.maximum(eXi / gi, 1) / np.abs(mu_X))
+        tau2 = max(np.maximum(eXi, gi) ** 2 / sigma2_X)
+        tau = min(tau1, tau2)
+
+        return tau
+
+    def update(self, species, der_sp, tau, step):
+
+        species["Time"][step] = species["Time"][step - 1] + tau
+
+        for specie in species.keys():
+            if specie != "Time":
+                rate = der_sp[specie] * tau
+                noise = np.sqrt(der_sp[specie] * np.random.normal(loc=0, scale=1) * tau)
+                d_specie = rate + noise
+                species[specie][step] = species[specie][step - 1] + d_specie
+
+        return species
+
+    def change_size(self, species, step):
+
+        if step >= len(species["Time"]):
+
+            new_max_steps = len(species["Time"]) * 2
+
+            for key, val in species.items():
+                pad_width = (0, new_max_steps - len(val))
+                species[key] = np.pad(val, pad_width, mode='constant')
+
+        return species
+
+    def resize_species(self, species, final_step):
+        for key in species.keys():
+            species[key] = species[key][:final_step]
+        return species
+
+
+    def simulate(self):
+
+        species, parameters = self.param_init(
+            model=self.model,
+            start=self.start,
+            stop=self.stop,
+            max_epochs=self.epochs,
+            alpha=self.alpha
+        )
+
+        der_sp = self.der_species(
+            model=self.model
+        )
+
+        if self.max_epochs:
+            max_epochs = self.max_epochs
+        else:
+            max_epochs = len(list(species["Time"]))
+
+        step = 1
+        while species["Time"][step - 1] < self.stop and step - 1 < max_epochs:
+
+            if self.tau:
+                tau = self.tau
+            else:
+                X = np.array([species[con][step - 1] for con in species.keys() if con != "Time"])
+                tau = self.compute_tau(
+                    X=X,
+                    params=self.model.params,
+                    epsilon=self.epsilon
+                )
+
+            species = self.update(
+                species=species,
+                der_sp=der_sp,
+                tau=tau,
                 step=step
             )
 
@@ -581,13 +747,17 @@ class TauLeaping(object):
 
 
 
+
+
+
+
 m = Model()
-m.parameters({"K1": 3, "K2": 5})
+m.parameters({"K1": 0.1, "K2": 0.05})
 
-m.species({"A": 100, "B": 100, "C": 500}, {"A": "-2*A*K1", "B": "-3*B+4*A*K2", "C":"-C"})
+m.species({"A": 100, "B": 0}, {"A": "K2 * B - K1 * A", "B": "K1 * A - K2 * B"})
 
-m.reactions({"reaction1": "A + B -> C", "reaction2": "C -> A + B"},
-           {"reaction1": "2.0 * A * B", "reaction2": "4.0*C"})
+m.reactions({"reaction1": "A -> B", "reaction2": "B -> A"},
+           {"reaction1": "K1 * A", "reaction2": "K2 * B"})
 
 
 print("Parameters: ", m.params)
@@ -604,9 +774,29 @@ print("K2: ", m.K2)
 
 print("A: ", m.A)
 print("B: ", m.B)
-print("C: ", m.C)
 
-model1 = SSA(m)
+
+model = ODE(model=m, start=0, stop=10, epochs=1000)
+
+model.simulate()
+
+
+a = list(model.species["A"])
+b = list(model.species["B"])
+time = list(model.species["Time"])
+print(a[:20])
+print(b[:20])
+print(time[:20])
+
+plt.plot(time, a, label="A")
+plt.plot(time, b, label="B")
+plt.legend()
+plt.show()
+
+
+
+"""
+model1 = CLE(m)
 print(model1.A)
 print(model1.B)
 
@@ -622,7 +812,7 @@ print(len(model1.species["Time"]))
 #print(s.parameters)
 #print(s.components)
 #print(s.params)
-
+"""
 
 
 
