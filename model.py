@@ -79,8 +79,10 @@ class Model(object):
             raise ("Please, first define Species and Parameters, then Reactions!")
 
         reacts_ = dict()
-
+        coefficients = dict()
+        react_sps = dict()
         for reaction, formula in reacts.items():
+
             react = []
             react_eq = formula.replace('+', ' + ').replace('->', ' -> ').replace('*', ' * ')
             components = react_eq.split()
@@ -88,6 +90,7 @@ class Model(object):
             for component in components:
                 if component in self.components or component in self.params:
                     react.append(component)
+
                 elif component in self.signs:
                     react.append(component)
                 else:
@@ -95,11 +98,40 @@ class Model(object):
                         react.append(float(component))
                     except ValueError:
                         print(f"This component {component} is not valid!")
+            comp = []
+            for component in components:
+                if component in self.components:
+                    comp.append(component)
 
             react = " ".join([str(r) for r in react])
             reacts_[reaction] = react
+            react_sps[reaction] = comp
+
+            coefficient = dict()
+            index = [index for index, value in enumerate(components) if value == '->']
+            if len(index) > 1:
+                print(f"Each reaction should have exactly one '->', but there are more than one in the {reaction}.")
+
+            for i in range(index[0]):
+                if components[i] in self.components:
+                    if components[i-1] not in self.signs and components[i-1] not in self.components:
+                        coefficient[components[i]] = - eval(components[i-1])
+                    else:
+                        coefficient[components[i]] = -1
+            for j in range(index[0]+1, len(components)):
+                if components[j] in self.components:
+                    if components[j-1] not in self.signs and components[j-1] not in self.components:
+                        coefficient[components[j]] =  eval(components[j - 1])
+                    else:
+                        coefficient[components[j]] = 1
+
+            coefficients[reaction] = coefficient
+
 
         setattr(self, "reacts_", reacts_)
+        setattr(self, "coeffs_", coefficients)
+        setattr(self, "react_sps", react_sps)
+
 
         if rates:
 
@@ -206,13 +238,12 @@ class ODE(object):
 
 
 class SSA(object):
-    def __init__(self, model=None, start=0, stop=10, epochs=None, max_epochs=1000,
-                 seed=42, alpha=100, steady_state=None, gamma=1e-18, **kwargs):
+    def __init__(self, model=None, start=0, stop=10, max_epochs=1000,
+                 seed=42, alpha=100, steady_state=None, gamma=1e-30, **kwargs):
 
         self.model = model
         self.start = start
         self.stop = stop
-        self.epochs = epochs
         self.max_epochs = max_epochs
         self.seed = seed
         self.alpha = alpha
@@ -287,20 +318,21 @@ class SSA(object):
                     for j in range(index[0]):
                         if sp[j] in model.components:
                             comp.append(sp[j])
-                            species[sp[j]][step] = species[sp[j]][step - 1] + 1
+                            species[sp[j]][step] = species[sp[j]][step - 1] - 1
                     for k in range(index[0] + 1, len(sp)):
                         if sp[k] in model.components:
                             comp.append(sp[k])
-                            species[sp[k]][step] = species[sp[k]][step - 1] - 1
+                            species[sp[k]][step] = species[sp[k]][step - 1] + 1
                     for sps in species.keys():
-                        if sps not in comp:
+                        if sps not in comp and sps != "Time":
                             species[sps][step] = species[sps][step - 1]
 
             else:
 
+                name = model.react_names[i-1]
                 keys_to_sum = model.react_names[:i + 1]
                 sum_props = sum(props[key] for key in keys_to_sum)
-                if react > props[react_name] and react <= sum_props:
+                if react > props[name] and react <= sum_props:
                     sp = model.reacts_[react_name].split()
                     index = [index for index, value in enumerate(sp) if value == '->']
                     if len(index) > 1:
@@ -310,13 +342,13 @@ class SSA(object):
                     for j in range(index[0]):
                         if sp[j] in model.components:
                             comp.append(sp[j])
-                            species[sp[j]][step] = species[sp[j]][step - 1] + 1
+                            species[sp[j]][step] = species[sp[j]][step - 1] - 1
                     for k in range(index[0] + 1, len(sp)):
                         if sp[k] in model.components:
                             comp.append(sp[k])
-                            species[sp[k]][step] = species[sp[k]][step - 1] - 1
+                            species[sp[k]][step] = species[sp[k]][step - 1] + 1
                     for sps in species.keys():
-                        if sps not in comp:
+                        if sps not in comp and sps != "Time":
                             species[sps][step] = species[sps][step - 1]
 
         return species
@@ -367,7 +399,7 @@ class SSA(object):
             )
             rand = np.random.uniform(low=0, high=1)
             num_reacts = len(self.model.reacts_)
-            react = dt * rand
+            react = a_sum * rand
 
             species = self.update(
                 species=species,
@@ -396,13 +428,12 @@ class SSA(object):
 
 
 class TauLeaping(object):
-    def __init__(self, model=None, start=0, stop=10, epochs=None, max_epochs=100,
-                 seed=42, alpha=100, steady_state=None, tau=None, epsilon=0.3, **kwargs):
+    def __init__(self, model=None, start=0, stop=None, max_epochs=100,
+                 seed=42, alpha=100, steady_state=None, tau=None, epsilon=0.03, **kwargs):
 
         self.model = model
         self.start = start
         self.stop = stop
-        self.epochs = epochs
         self.max_epochs = max_epochs
         self.seed = seed
         self.alpha = alpha
@@ -424,8 +455,10 @@ class TauLeaping(object):
 
         if max_epochs:
             epochs = max_epochs
-        else:
+        elif stop:
             epochs = (stop - start) * alpha
+        else:
+            epochs = (10 * start) * alpha
 
         species["Time"] = np.zeros(epochs)
         species["Time"][0] = start
@@ -455,18 +488,58 @@ class TauLeaping(object):
 
         return propensity_sum, props
 
-    def calculate_tau(self, X, params, epsilon):
+    def calculate_tau(self, species, model, step, epsilon):
+        """
+        Calculate the time step tau based on the given parameters.
 
-        eXi = epsilon * X
-        gi = max(params.values())
-        mu_X = sum(abs(rate) for rate in params.values())
-        sigma2_X = sum(rate ** 2 for rate in params.values())
+        Args:
+        epsilon (float): A small positive constant.
+        X (ndarray): Array containing state variables X_i.
+        v (ndarray): Array containing auxiliary values v_ij.
+        R (ndarray): Array containing reaction rates R_j.
 
-        tau1 = max(np.maximum(eXi / gi, 1) / np.abs(mu_X))
-        tau2 = max(np.maximum(eXi, gi) ** 2 / sigma2_X)
-        tau = min(tau1, tau2)
+        Returns:
+        float: The calculated time step tau.
+        """
+        X = X = np.array([species[con][step-1] for con in species.keys() if con != "Time"])
+        v = []
 
-        return tau
+        for key, val in model.coeffs_.items():
+            d = []
+            for sp in model.react_sps[key]:
+                d.append(val[sp])
+            v.append(d)
+
+        v = np.array(v)
+        R = []
+        for p in model.param_names:
+            R.append(model.params[p])
+        R = np.array(R)
+
+
+        # Initialize lists to store μ_i and σ_i^2 values
+        mu_values = []
+        sigma_squared_values = []
+
+        # Calculate μ_i and σ_i^2 for each state variable X_i
+        for i in range(len(X)):
+            mu_i = np.sum(v[i] * R)
+            sigma_squared_i = np.sum((v[i] ** 2) * R)
+            mu_values.append(mu_i)
+            sigma_squared_values.append(sigma_squared_i)
+
+        # Determine the highest order event g_i for each state variable
+        g_values = [np.argmax(v[i]) + 1 for i in range(len(X))]
+
+        # Calculate the time step τ based on the formula
+        tau_values = []
+        for i in range(len(X)):
+            tau_i = min(max(epsilon * X[i] / g_values[i], 1) / abs(mu_values[i]),
+                        max(epsilon * X[i] / g_values[i], 1) ** 2 / sigma_squared_values[i])
+            tau_values.append(tau_i)
+
+        # Return the minimum value of τ
+        return min(tau_values)
 
     def calculate_lambda(self, propensities, species, params, tau, step):
 
@@ -502,10 +575,10 @@ class TauLeaping(object):
 
             for i in range(index[0]):
                 if split_prop[i] in model.components:
-                    species[split_prop[i]][step] = species[split_prop[i]][step-1] + num_reacts[react]
+                    species[split_prop[i]][step] = species[split_prop[i]][step-1] - num_reacts[react]
             for j in range(index[0], len(split_prop)):
                 if split_prop[j] in model.components:
-                    species[split_prop[j]][step] = species[split_prop[j]][step-1] - num_reacts[react]
+                    species[split_prop[j]][step] = species[split_prop[j]][step-1] + num_reacts[react]
 
         return species
 
@@ -537,7 +610,7 @@ class TauLeaping(object):
         )
 
         step = 1
-        while species["Time"][step-1] < self.stop and step-1 < self.max_epochs:
+        while step-1 < self.max_epochs:
 
             a_sum, props = self.propensity_sum(
                 step=step,
@@ -553,11 +626,11 @@ class TauLeaping(object):
             if self.tau:
                 tau = self.tau
             else:
-                X = np.array([species[con][step-1] for con in species.keys() if con != "Time"])
 
                 tau = self.calculate_tau(
-                    X=X,
-                    params=self.model.params,
+                    species=species,
+                    model=self.model,
+                    step=step,
                     epsilon=self.epsilon
                 )
 
@@ -767,7 +840,8 @@ print("Reactions: ", m.reacts_)
 print("Rate of Changes:", m.ROC_)
 print("param names", m.param_names)
 print("react names", m.react_names)
-
+print("Coefficients: ", m.coeffs_)
+print("R", m.react_sps)
 
 print("K1: ", m.K1)
 print("K2: ", m.K2)
@@ -776,7 +850,9 @@ print("A: ", m.A)
 print("B: ", m.B)
 
 
-model = ODE(model=m, start=0, stop=10, epochs=1000)
+#model = ODE(model=m, start=0, stop=100, epochs=1000)
+#model = SSA(model=m, start=0, stop=100, epochs=1000)
+model = TauLeaping(model=m, start=0, stop=100, max_epochs=100)
 
 model.simulate()
 
@@ -784,9 +860,12 @@ model.simulate()
 a = list(model.species["A"])
 b = list(model.species["B"])
 time = list(model.species["Time"])
-print(a[:20])
-print(b[:20])
-print(time[:20])
+print(a)
+print(b)
+print(time)
+print(len(a))
+print(len(b))
+print(len(time))
 
 plt.plot(time, a, label="A")
 plt.plot(time, b, label="B")
