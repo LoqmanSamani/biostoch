@@ -501,7 +501,7 @@ class TauLeaping(object):
         Returns:
         float: The calculated time step tau.
         """
-        X = X = np.array([species[con][step-1] for con in species.keys() if con != "Time"])
+        X = np.array([species[con][step-1] for con in species.keys() if con != "Time"])
         v = []
 
         for key, val in model.coeffs_.items():
@@ -512,8 +512,16 @@ class TauLeaping(object):
 
         v = np.array(v)
         R = []
-        for p in model.param_names:
-            R.append(model.params[p])
+
+        comp = model.params
+        X1 = {key: val[step-1] for key, val in species.items() if key != "Time"}
+        comp.update(X1)
+
+        s = 0
+        for react, rate in model.rates_.items():
+            if react == model.react_names[s]:
+                R.append(eval(rate, comp))
+                s += 1
         R = np.array(R)
 
 
@@ -553,6 +561,9 @@ class TauLeaping(object):
         lambdas = {}
         for react, prop in propensities.items():
             lambdas[react] = eval(prop, last_step) * tau
+        for r, l in lambdas.items():
+            if l <=0:
+                lambdas[r] = .3
 
         return lambdas
 
@@ -569,16 +580,23 @@ class TauLeaping(object):
 
         for react, prop in model.reacts_.items():
             split_prop = prop.split()
-            index = [index for index, value in enumerate(split_prop) if value == '->']
-            if len(index) > 1:
-                print(f"Each reaction should have exactly one '->', but there are more than one in the {react}.")
+            split_index = [index for index, value in enumerate(split_prop) if value == '->']
 
-            for i in range(index[0]):
-                if split_prop[i] in model.components:
-                    species[split_prop[i]][step] = species[split_prop[i]][step-1] - num_reacts[react]
-            for j in range(index[0], len(split_prop)):
-                if split_prop[j] in model.components:
-                    species[split_prop[j]][step] = species[split_prop[j]][step-1] + num_reacts[react]
+            if len(split_index) != 1:
+                print(
+                    f"Error: Each reaction should have exactly one '->', but there are {len(split_index)} in {react}.")
+                continue
+
+            reactants = split_prop[:split_index[0]]
+            products = split_prop[split_index[0] + 1:]
+
+            for specie in reactants:
+                if specie in model.components:
+                    species[specie][step] = species[specie][step - 1] - num_reacts[react]
+
+            for specie in products:
+                if specie in model.components:
+                    species[specie][step] = species[specie][step - 1] + num_reacts[react]
 
         return species
 
@@ -625,6 +643,7 @@ class TauLeaping(object):
 
             if self.tau:
                 tau = self.tau
+
             else:
 
                 tau = self.calculate_tau(
@@ -852,7 +871,7 @@ print("B: ", m.B)
 
 #model = ODE(model=m, start=0, stop=100, epochs=1000)
 #model = SSA(model=m, start=0, stop=100, epochs=1000)
-model = TauLeaping(model=m, start=0, stop=100, max_epochs=100)
+model = TauLeaping(model=m, start=0, stop=100, max_epochs=1000)
 
 model.simulate()
 
