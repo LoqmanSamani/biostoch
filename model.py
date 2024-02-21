@@ -115,9 +115,9 @@ class Model(object):
             for i in range(index[0]):
                 if components[i] in self.components:
                     if components[i-1] not in self.signs and components[i-1] not in self.components:
-                        coefficient[components[i]] = - eval(components[i-1])
+                        coefficient[components[i]] =  - eval(components[i-1])
                     else:
-                        coefficient[components[i]] = -1
+                        coefficient[components[i]] = - 1
             for j in range(index[0]+1, len(components)):
                 if components[j] in self.components:
                     if components[j-1] not in self.signs and components[j-1] not in self.components:
@@ -428,18 +428,17 @@ class SSA(object):
 
 
 class TauLeaping(object):
-    def __init__(self, model=None, start=0, stop=None, max_epochs=100,
-                 seed=42, alpha=100, steady_state=None, tau=None, epsilon=0.03, **kwargs):
+    def __init__(self, model=None, start=0.0, stop=100.0, max_epochs=100, seed=42, steady_state=None, epsilon=0.03, call_tau=None, **kwargs):
 
         self.model = model
         self.start = start
         self.stop = stop
         self.max_epochs = max_epochs
         self.seed = seed
-        self.alpha = alpha
         self.steady_state = steady_state
-        self.tau = tau
         self.epsilon = epsilon
+        self.tau = self.max_epochs / (self.stop-self.start)
+        self.call_tau = call_tau
 
         if self.model:
             model_attributes = vars(self.model)
@@ -447,18 +446,14 @@ class TauLeaping(object):
 
         self.species = None
         self.parameters = None
+        self.lams = []
+        self.num_r = []
 
-    def param_init(self, model, start, stop, max_epochs, alpha):
+    def param_init(self, model, start, max_epochs):
 
         species = {}
         parameters = {}
-
-        if max_epochs:
-            epochs = max_epochs
-        elif stop:
-            epochs = (stop - start) * alpha
-        else:
-            epochs = (10 * start) * alpha
+        epochs = max_epochs
 
         species["Time"] = np.zeros(epochs)
         species["Time"][0] = start
@@ -550,22 +545,23 @@ class TauLeaping(object):
         return min(tau_values)
 
     def calculate_lambda(self, propensities, species, params, tau, step):
-
         last_step = {}
         for key, val in species.items():
             if key != "Time":
-                last_step[key] = val[step-1]
+                last_step[key] = val[step - 1]
         for key, val in params.items():
             last_step[key] = val
-
+        lams = []
         lambdas = {}
         for react, prop in propensities.items():
-            lambdas[react] = eval(prop, last_step) * tau
-        for r, l in lambdas.items():
-            if l <=0:
-                lambdas[r] = .3
+            lambda_val = eval(prop, last_step) * tau
+            lams.append(lambda_val)
+            if lambda_val <= 0.0:
+                lambdas[react] = 1
+            else:
+                lambdas[react] = lambda_val
 
-        return lambdas
+        return lambdas, lams
 
     def num_reacts(self, lambdas):
         n_reacts = {}
@@ -587,16 +583,13 @@ class TauLeaping(object):
                     f"Error: Each reaction should have exactly one '->', but there are {len(split_index)} in {react}.")
                 continue
 
-            reactants = split_prop[:split_index[0]]
-            products = split_prop[split_index[0] + 1:]
+        comp_react = {}
+        for comp in model.components:
+            r = sum([num_reacts[e] * model.coeffs_[e][comp] for e in model.react_names if comp in model.react_sps[e]])
+            comp_react[comp] = r
 
-            for specie in reactants:
-                if specie in model.components:
-                    species[specie][step] = species[specie][step - 1] - num_reacts[react]
-
-            for specie in products:
-                if specie in model.components:
-                    species[specie][step] = species[specie][step - 1] + num_reacts[react]
+        for comp, val in comp_react.items():
+            species[comp][step] = species[comp][step-1] + val
 
         return species
 
@@ -622,13 +615,11 @@ class TauLeaping(object):
         species, parameters = self.param_init(
             model=self.model,
             start=self.start,
-            stop=self.stop,
             max_epochs=self.max_epochs,
-            alpha=self.alpha
         )
 
         step = 1
-        while step-1 < self.max_epochs:
+        while step < self.max_epochs:
 
             a_sum, props = self.propensity_sum(
                 step=step,
@@ -641,28 +632,28 @@ class TauLeaping(object):
                 print(f"Simulation reached steady state (iteration: {step}). No further changes are occurring.")
                 break
 
-            if self.tau:
-                tau = self.tau
-
-            else:
-
+            if self.call_tau:
                 tau = self.calculate_tau(
                     species=species,
                     model=self.model,
                     step=step,
                     epsilon=self.epsilon
                 )
+            else:
+                tau = self.tau
 
-            lambdas = self.calculate_lambda(
+            lambdas, lams = self.calculate_lambda(
                 propensities=self.model.rates_,
                 species=species,
                 params=self.model.params,
                 tau=tau,
                 step=step
             )
+            self.lams.append(lams)
             num_reacts = self.num_reacts(
                 lambdas=lambdas
             )
+            self.num_r.append(num_reacts)
 
             species = self.update(
                 species=species,
@@ -678,6 +669,7 @@ class TauLeaping(object):
                 species=species,
                 step=step
             )
+            species = species
 
         species = self.resize_species(
             species=species,
@@ -846,7 +838,7 @@ class CLE(object):
 m = Model()
 m.parameters({"K1": 0.1, "K2": 0.05})
 
-m.species({"A": 100, "B": 0}, {"A": "K2 * B - K1 * A", "B": "K1 * A - K2 * B"})
+m.species({"A": 100.0, "B": 0.0}, {"A": "K2 * B - K1 * A", "B": "K1 * A - K2 * B"})
 
 m.reactions({"reaction1": "A -> B", "reaction2": "B -> A"},
            {"reaction1": "K1 * A", "reaction2": "K2 * B"})
@@ -871,7 +863,7 @@ print("B: ", m.B)
 
 #model = ODE(model=m, start=0, stop=100, epochs=1000)
 #model = SSA(model=m, start=0, stop=100, epochs=1000)
-model = TauLeaping(model=m, start=0, stop=100, max_epochs=1000)
+model = TauLeaping(model=m, max_epochs=100)
 
 model.simulate()
 
@@ -885,6 +877,8 @@ print(time)
 print(len(a))
 print(len(b))
 print(len(time))
+print("model.lams", model.lams)
+print("model.num_r", model.num_r)
 
 plt.plot(time, a, label="A")
 plt.plot(time, b, label="B")
