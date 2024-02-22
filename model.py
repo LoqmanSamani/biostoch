@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-
 class Model(object):
 
     def __init__(self, signs=None):
@@ -10,17 +9,65 @@ class Model(object):
         if not signs:
             self.signs = ["+", "->", "*", "-"]
 
+    def __repr__(self):
+        if hasattr(self, 'params'):
+            params = self.params
+        else:
+            params = None
+
+        if hasattr(self, 'components'):
+            components = self.components
+        else:
+            components = None
+
+        if hasattr(self, 'ROC_'):
+            ROC_ = self.ROC_
+        else:
+            ROC_ = None
+
+        if hasattr(self, 'react_names'):
+            react_names = self.react_names
+        else:
+            react_names = None
+
+        if hasattr(self, 'reacts_'):
+            reacts_ = self.reacts_
+        else:
+            reacts_ = None
+
+        if hasattr(self, 'coeffs_'):
+            coeffs_ = self.coeffs_
+        else:
+            coeffs_ = None
+
+        if hasattr(self, 'react_sps'):
+            react_sps = self.react_sps
+        else:
+            react_sps = None
+
+        if hasattr(self, 'rates_'):
+            rates_ = self.rates_
+        else:
+            rates_ = None
+
+        return (f"Model: {self.signs}, {params}, {components}, {ROC_}, "
+                f"{react_names}, {reacts_}, {coeffs_}, {react_sps}, {rates_}")
+
     def parameters(self, params):
         """
         params: A dictionary containing all rate constants in the system.
                 Each key represents a rate constant (e.g., K1, K2, ..., Kn),
                 and each corresponding value represents the value of that rate constant.
         """
+        if not isinstance(params, dict):
+            raise TypeError("params must be a dictionary.")
+
         self.params = params
         setattr(self, "param_names", list(params.keys()))
 
         for key, val in params.items():
             setattr(self, key, val)
+
 
     def species(self, components, rate_change):
 
@@ -30,6 +77,12 @@ class Model(object):
                    each corresponding value represents the initial concentration.
         rate_change: A dictionary containing rate of change for each component.
         """
+
+        if not isinstance(components, dict):
+            raise TypeError("components must be a dictionary.")
+
+        if not isinstance(rate_change, dict):
+            raise TypeError("rate_change must be a dictionary.")
 
         setattr(self, "components", list(components.keys()))
 
@@ -53,7 +106,7 @@ class Model(object):
                     try:
                         roc.append(float(v))
                     except ValueError:
-                        print(f"This part of the ROC-equation ({v}) is not valid!")
+                        print(f"This part of the rate_change ({v}) is not valid!")
 
             roc = " ".join([str(r) for r in roc])
 
@@ -61,7 +114,7 @@ class Model(object):
 
         setattr(self, "ROC_", ROC_)
 
-    def reactions(self, reacts, rates=None):
+    def reactions(self, reacts, rates):
         """
         reactions: A dictionary containing reaction equation for each reaction.
                    Each key represents the reaction name, and each value represents the reaction equation.
@@ -73,10 +126,17 @@ class Model(object):
                exp:
                    {reaction1: "K1 * A * B", ...}
         """
+
+        if not isinstance(reacts, dict):
+            raise TypeError("reacts must be a dictionary.")
+
+        if not isinstance(rates, dict):
+            raise TypeError("rates must be a dictionary.")
+
         setattr(self, "react_names", list(reacts.keys()))
 
         if not self.params or not self.components:
-            raise ("Please, first define Species and Parameters, then Reactions!")
+            raise ValueError("Please define Species and Parameters before Reactions!")
 
         reacts_ = dict()
         coefficients = dict()
@@ -86,6 +146,13 @@ class Model(object):
             react = []
             react_eq = formula.replace('+', ' + ').replace('->', ' -> ').replace('*', ' * ')
             components = react_eq.split()
+
+            if '->' not in formula:
+                raise ValueError(f"Missing '->' in the reaction equation for {reaction}.")
+
+            if formula.count('->') != 1:
+                raise ValueError(
+                    f"Each reaction should have exactly one '->', but there are {formula.count('->')} in {reaction}.")
 
             for component in components:
                 if component in self.components or component in self.params:
@@ -97,7 +164,7 @@ class Model(object):
                     try:
                         react.append(float(component))
                     except ValueError:
-                        print(f"This component {component} is not valid!")
+                        print(f"Unexpected component '{component}' in the reaction equation for {reaction}.")
             comp = []
             for component in components:
                 if component in self.components:
@@ -115,13 +182,13 @@ class Model(object):
             for i in range(index[0]):
                 if components[i] in self.components:
                     if components[i-1] not in self.signs and components[i-1] not in self.components:
-                        coefficient[components[i]] =  - eval(components[i-1])
+                        coefficient[components[i]] = - eval(components[i-1])
                     else:
                         coefficient[components[i]] = - 1
             for j in range(index[0]+1, len(components)):
                 if components[j] in self.components:
                     if components[j-1] not in self.signs and components[j-1] not in self.components:
-                        coefficient[components[j]] =  eval(components[j - 1])
+                        coefficient[components[j]] = eval(components[j - 1])
                     else:
                         coefficient[components[j]] = 1
 
@@ -133,33 +200,31 @@ class Model(object):
         setattr(self, "react_sps", react_sps)
 
 
-        if rates:
+        rates_ = dict()
 
-            rates_ = dict()
+        for reaction, rate in rates.items():
+            rate_equation = []
+            rate_eq = rate.replace('*', ' * ').replace('+', ' + ').replace('->', ' -> ')
+            components = rate_eq.split()
 
-            for reaction, rate in rates.items():
-                rate_equation = []
-                rate_eq = rate.replace('*', ' * ').replace('+', ' + ').replace('->', ' -> ')
-                components = rate_eq.split()
+            for component in components:
+                if component in self.components or component in self.params:
+                    rate_equation.append(component)
+                elif component in self.signs:
+                    rate_equation.append(component)
+                else:
+                    try:
+                        rate_equation.append(float(component))
+                    except ValueError:
+                        print(f"This component {component} is not valid!")
 
-                for component in components:
-                    if component in self.components or component in self.params:
-                        rate_equation.append(component)
-                    elif component in self.signs:
-                        rate_equation.append(component)
-                    else:
-                        try:
-                            rate_equation.append(float(component))
-                        except ValueError:
-                            print(f"This component {component} is not valid!")
+            rate_equation = " ".join([str(rate) for rate in rate_equation])
 
-                rate_equation = " ".join([str(rate) for rate in rate_equation])
-
-                try:
-                    if reaction in self.reacts_.keys():
-                        rates_[reaction] = rate_equation
-                except ValueError:
-                    print("Reactions and rates do not match!")
+            try:
+                if reaction in self.reacts_.keys():
+                    rates_[reaction] = rate_equation
+            except ValueError:
+                print("Reactions and rates do not match!")
 
         setattr(self, "rates_", rates_)
 
@@ -189,7 +254,7 @@ class ODE(object):
         for specie in model.components:
             species[specie] = np.zeros(epochs)
             species[specie][0] = getattr(model, specie)
-        for parameter in self.model.params:
+        for parameter in model.params:
             parameters[parameter] = getattr(model, parameter)
 
         return species, parameters
@@ -437,7 +502,7 @@ class TauLeaping(object):
         self.seed = seed
         self.steady_state = steady_state
         self.epsilon = epsilon
-        self.tau = self.max_epochs / (self.stop-self.start)
+        self.tau = (self.stop-self.start) / self.max_epochs
         self.call_tau = call_tau
 
         if self.model:
@@ -681,19 +746,16 @@ class TauLeaping(object):
 
 
 class CLE(object):
-    def __init__(self, model=None, start=0, stop=10, epochs=None, max_epochs=None,
-                     seed=42, alpha=100, steady_state=None, tau=None, epsilon=0.3, **kwargs):
+    def __init__(self, model=None, start=0.0, stop=100.0, max_epochs=100, seed=42, steady_state=None, **kwargs):
 
         self.model = model
         self.start = start
         self.stop = stop
-        self.epochs = epochs
         self.max_epochs = max_epochs
         self.seed = seed
-        self.alpha = alpha
         self.steady_state = steady_state
-        self.tau = tau
-        self.epsilon = epsilon
+
+        self.tau = (self.stop - self.start) / self.max_epochs
 
         if self.model:
             model_attributes = vars(self.model)
@@ -702,57 +764,78 @@ class CLE(object):
         self.species = None
         self.parameters = None
 
-    def param_init(self, model, start, stop, max_epochs, alpha):
+    def param_init(self, model, start, max_epochs):
 
         species = {}
         parameters = {}
-
-        if max_epochs:
-            epochs = max_epochs
-        else:
-            epochs = (stop - start) * alpha
+        epochs = max_epochs
 
         species["Time"] = np.zeros(epochs)
         species["Time"][0] = start
         for specie in model.components:
             species[specie] = np.zeros(epochs)
-            species[specie][0] = getattr(model, specie)
+            if getattr(model, specie) != 0:
+                species[specie][0] = getattr(model, specie)
+            else:
+                species[specie][0] = getattr(model, specie) + 1e-8
+
         for parameter in self.model.params:
             parameters[parameter] = getattr(model, parameter)
 
         return species, parameters
 
-    def der_species(self, model):
+    def compute_change(self, model, species, tau, step):
 
-        der_sp = {}
-        for specie, rate in model.ROC_.items():
-            der_sp[specie] = eval(rate)
+        changes = {}
+        terms = {}
+        for param, val in model.params.items():
+            terms[param] = val
+        for specie, val in species.items():
+            terms[specie] = val[step-1]
 
-        return der_sp
+        for react, rate in model.rates_.items():
+            changes[react] = eval(rate, terms) * tau
 
-    def compute_tau(self, X, params, epsilon):
+        return changes
 
-        eXi = epsilon * X
-        gi = max(params.values())
-        mu_X = sum(abs(rate) for rate in params.values())
-        sigma2_X = sum(rate ** 2 for rate in params.values())
+    def compute_noise(self, model, species, tau, step):
 
-        tau1 = max(np.maximum(eXi / gi, 1) / np.abs(mu_X))
-        tau2 = max(np.maximum(eXi, gi) ** 2 / sigma2_X)
-        tau = min(tau1, tau2)
+        noises = {}
+        terms = {}
+        for param, val in model.params.items():
+            terms[param] = val
+        for specie, val in species.items():
+            terms[specie] = val[step-1]
+        for react, rate in model.rates_.items():
+            rand = np.random.normal()
+            noises[react] = (tau**.5) * ((eval(rate, terms))**.5) * rand
 
-        return tau
+        return noises
+    def compute_changes(self, noises, changes):
+        changes_ = {}
+        for react in changes.keys():
+            changes_[react] = noises[react] + changes[react]
+        return changes_
 
-    def update(self, species, der_sp, tau, step):
+    def update(self, species, model, changes_, step, tau):
 
         species["Time"][step] = species["Time"][step - 1] + tau
+        for react, formula in model.reacts_.items():
+            split_form = formula.split()
+            split_index = [index for index, value in enumerate(split_form) if value == '->']
 
-        for specie in species.keys():
-            if specie != "Time":
-                rate = der_sp[specie] * tau
-                noise = np.sqrt(der_sp[specie] * np.random.normal(loc=0, scale=1) * tau)
-                d_specie = rate + noise
-                species[specie][step] = species[specie][step - 1] + d_specie
+            if len(split_index) != 1:
+                print(
+                    f"Error: Each reaction should have exactly one '->', but there are {len(split_index)} in {react}.")
+                continue
+
+        comp_react = {}
+        for comp in model.components:
+            r = sum([changes_[e] * model.coeffs_[e][comp] for e in model.react_names if comp in model.react_sps[e]])
+            comp_react[comp] = r
+
+        for comp, val in comp_react.items():
+            species[comp][step] = species[comp][step-1] + val
 
         return species
 
@@ -773,48 +856,23 @@ class CLE(object):
             species[key] = species[key][:final_step]
         return species
 
-
     def simulate(self):
 
         species, parameters = self.param_init(
             model=self.model,
             start=self.start,
-            stop=self.stop,
-            max_epochs=self.epochs,
-            alpha=self.alpha
+            max_epochs=self.max_epochs,
         )
-
-        der_sp = self.der_species(
-            model=self.model
-        )
-
-        if self.max_epochs:
-            max_epochs = self.max_epochs
-        else:
-            max_epochs = len(list(species["Time"]))
 
         step = 1
-        while species["Time"][step - 1] < self.stop and step - 1 < max_epochs:
+        while species["Time"][step - 1] < self.stop and step - 1 < self.max_epochs:
 
-            if self.tau:
-                tau = self.tau
-            else:
-                X = np.array([species[con][step - 1] for con in species.keys() if con != "Time"])
-                tau = self.compute_tau(
-                    X=X,
-                    params=self.model.params,
-                    epsilon=self.epsilon
-                )
-
-            species = self.update(
-                species=species,
-                der_sp=der_sp,
-                tau=tau,
-                step=step
-            )
+            changes = self.compute_change(model=self.model, species=species, tau=self.tau, step=step)
+            noises = self.compute_noise(model=self.model, species=species, tau=self.tau, step=step)
+            changes_ = self.compute_changes(noises=noises, changes=changes)
+            species = self.update(species=species, model=self.model, changes_=changes_, step=step, tau=self.tau)
 
             step += 1
-
             species = self.change_size(
                 species=species,
                 step=step
@@ -843,68 +901,47 @@ m.species({"A": 100.0, "B": 0.0}, {"A": "K2 * B - K1 * A", "B": "K1 * A - K2 * B
 m.reactions({"reaction1": "A -> B", "reaction2": "B -> A"},
            {"reaction1": "K1 * A", "reaction2": "K2 * B"})
 
+model1 = ODE(model=m, start=0, stop=100, epochs=1000)
+model2 = SSA(model=m, start=0, stop=100, max_epochs=100)
+model3 = TauLeaping(model=m, start=0, stop=100, epochs=100)
+model4 = CLE(model=m, max_epochs=100)
 
-print("Parameters: ", m.params)
-print("Species: ", m.components)
-print("Rate of Reactions: ", m.rates_)
-print("Reactions: ", m.reacts_)
-print("Rate of Changes:", m.ROC_)
-print("param names", m.param_names)
-print("react names", m.react_names)
-print("Coefficients: ", m.coeffs_)
-print("R", m.react_sps)
-
-print("K1: ", m.K1)
-print("K2: ", m.K2)
-
-print("A: ", m.A)
-print("B: ", m.B)
+model1.simulate()
+model2.simulate()
+model3.simulate()
+model4.simulate()
 
 
-#model = ODE(model=m, start=0, stop=100, epochs=1000)
-#model = SSA(model=m, start=0, stop=100, epochs=1000)
-model = TauLeaping(model=m, max_epochs=100)
-
-model.simulate()
 
 
-a = list(model.species["A"])
-b = list(model.species["B"])
-time = list(model.species["Time"])
-print(a)
-print(b)
-print(time)
-print(len(a))
-print(len(b))
-print(len(time))
-print("model.lams", model.lams)
-print("model.num_r", model.num_r)
+plt.plot(model1.species["Time"], model1.species["A"], label="A")
+plt.plot(model1.species["Time"], model1.species["B"], label="B")
+plt.legend()
+plt.show()
 
-plt.plot(time, a, label="A")
-plt.plot(time, b, label="B")
+
+plt.plot(model2.species["Time"], model2.species["A"], label="A")
+plt.plot(model2.species["Time"], model2.species["B"], label="B")
+plt.legend()
+plt.show()
+
+
+plt.plot(model3.species["Time"], model3.species["A"], label="A")
+plt.plot(model3.species["Time"], model3.species["B"], label="B")
+plt.legend()
+plt.show()
+
+
+plt.plot(model4.species["Time"], model4.species["A"], label="A")
+plt.plot(model4.species["Time"], model4.species["B"], label="B")
 plt.legend()
 plt.show()
 
 
 
-"""
-model1 = CLE(m)
-print(model1.A)
-print(model1.B)
-
-model1.simulate()
-print("this is it ", model1.species)
-#print(model.species)
-print(len(model1.species["Time"]))
-#s= ODE(m)
-
-#s.simulate()
-
-#print(s.species)
-#print(s.parameters)
-#print(s.components)
-#print(s.params)
-"""
 
 
+
+representation = repr(m)
+print(representation)
 
