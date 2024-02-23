@@ -13,7 +13,7 @@ HOMEPAGE = "https://github.com/LoqmanSamani/biostoch"
 
 # Setting up
 setup(
-    name="BioStoch",
+    name="biostoch",
     version=VERSION,
     author="Loghman Samani",
     author_email="samaniloqman91@gmail.com",

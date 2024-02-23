@@ -7,7 +7,7 @@ class Model(object):
     def __init__(self, signs=None):
 
         if not signs:
-            self.signs = ["+", "->", "*", "-"]
+            self.signs = ["+", "->", "*", "-", "**"]
 
     def __repr__(self):
         if hasattr(self, 'params'):
@@ -93,7 +93,7 @@ class Model(object):
         for key, val in rate_change.items():
 
             roc = []
-            val = val.replace('+', ' + ').replace('->', ' -> ').replace('*', ' * ').replace('-', ' - ')
+            val = val.replace('+', ' + ').replace('->', ' -> ').replace('*', ' * ').replace('-', ' - ').replace('**', ' ** ')
             val = val.split()
 
             for v in val:
@@ -144,7 +144,7 @@ class Model(object):
         for reaction, formula in reacts.items():
 
             react = []
-            react_eq = formula.replace('+', ' + ').replace('->', ' -> ').replace('*', ' * ')
+            react_eq = formula.replace('+', ' + ').replace('->', ' -> ').replace('*', ' * ').replace('**', ' ** ')
             components = react_eq.split()
 
             if '->' not in formula:
@@ -204,7 +204,7 @@ class Model(object):
 
         for reaction, rate in rates.items():
             rate_equation = []
-            rate_eq = rate.replace('*', ' * ').replace('+', ' + ').replace('->', ' -> ')
+            rate_eq = rate.replace('*', ' * ').replace('+', ' + ').replace('->', ' -> ').replace('**', ' ** ')
             components = rate_eq.split()
 
             for component in components:
@@ -561,7 +561,7 @@ class TauLeaping(object):
         Returns:
         float: The calculated time step tau.
         """
-        X = np.array([species[con][step-1] for con in species.keys() if con != "Time"])
+        X = np.array([species[con][step - 1] for con in species.keys() if con != "Time"])
         v = []
 
         for key, val in model.coeffs_.items():
@@ -574,7 +574,7 @@ class TauLeaping(object):
         R = []
 
         comp = model.params
-        X1 = {key: val[step-1] for key, val in species.items() if key != "Time"}
+        X1 = {key: val[step - 1] for key, val in species.items() if key != "Time"}
         comp.update(X1)
 
         s = 0
@@ -583,7 +583,6 @@ class TauLeaping(object):
                 R.append(eval(rate, comp))
                 s += 1
         R = np.array(R)
-
 
         # Initialize lists to store μ_i and σ_i^2 values
         mu_values = []
@@ -901,9 +900,12 @@ m.species({"A": 100.0, "B": 0.0}, {"A": "K2 * B - K1 * A", "B": "K1 * A - K2 * B
 m.reactions({"reaction1": "A -> B", "reaction2": "B -> A"},
            {"reaction1": "K1 * A", "reaction2": "K2 * B"})
 
+print(m.react_sps)
+print(m.coeffs_)
+
 model1 = ODE(model=m, start=0, stop=100, epochs=1000)
 model2 = SSA(model=m, start=0, stop=100, max_epochs=100)
-model3 = TauLeaping(model=m, start=0, stop=100, epochs=100)
+model3 = TauLeaping(model=m, start=0, stop=100, max_epochs=100)
 model4 = CLE(model=m, max_epochs=100)
 
 model1.simulate()

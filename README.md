@@ -8,7 +8,7 @@ The library is under development and cannot yet be used.
 How to install BioStoch:
 ```bash
     pip  install numpy matplotlib seaborn pandas  # install required libraries
-    pip install BioStoch # install BioStoch library
+    pip install biostoch # install biostoch library
 ```
 
 How to use BioStoch:
