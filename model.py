@@ -575,7 +575,7 @@ class TauLeaping(object):
 
         comp = model.params
         X1 = {key: val[step - 1] for key, val in species.items() if key != "Time"}
-        comp.update(X1)
+        comp.update(X1,,
 
         s = 0
         for react, rate in model.rates_.items():
