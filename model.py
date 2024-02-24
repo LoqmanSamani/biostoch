@@ -548,19 +548,8 @@ class TauLeaping(object):
 
         return propensity_sum, props
 
-    def calculate_tau(self, species, model, step, epsilon):
-        """
-        Calculate the time step tau based on the given parameters.
+    def compute_tau(self, species, model, step, epsilon):
 
-        Args:
-        epsilon (float): A small positive constant.
-        X (ndarray): Array containing state variables X_i.
-        v (ndarray): Array containing auxiliary values v_ij.
-        R (ndarray): Array containing reaction rates R_j.
-
-        Returns:
-        float: The calculated time step tau.
-        """
         X = np.array([species[con][step - 1] for con in species.keys() if con != "Time"])
         v = []
 
@@ -575,7 +564,7 @@ class TauLeaping(object):
 
         comp = model.params
         X1 = {key: val[step - 1] for key, val in species.items() if key != "Time"}
-        comp.update(X1,,
+        comp.update(X1)
 
         s = 0
         for react, rate in model.rates_.items():
@@ -584,29 +573,25 @@ class TauLeaping(object):
                 s += 1
         R = np.array(R)
 
-        # Initialize lists to store μ_i and σ_i^2 values
         mu_values = []
         sigma_squared_values = []
 
-        # Calculate μ_i and σ_i^2 for each state variable X_i
         for i in range(len(X)):
             mu_i = np.sum(v[i] * R)
             sigma_squared_i = np.sum((v[i] ** 2) * R)
             mu_values.append(mu_i)
             sigma_squared_values.append(sigma_squared_i)
 
-        # Determine the highest order event g_i for each state variable
         g_values = [np.argmax(v[i]) + 1 for i in range(len(X))]
 
-        # Calculate the time step τ based on the formula
         tau_values = []
         for i in range(len(X)):
             tau_i = min(max(epsilon * X[i] / g_values[i], 1) / abs(mu_values[i]),
                         max(epsilon * X[i] / g_values[i], 1) ** 2 / sigma_squared_values[i])
             tau_values.append(tau_i)
 
-        # Return the minimum value of τ
         return min(tau_values)
+
 
     def calculate_lambda(self, propensities, species, params, tau, step):
         last_step = {}
@@ -697,7 +682,7 @@ class TauLeaping(object):
                 break
 
             if self.call_tau:
-                tau = self.calculate_tau(
+                tau = self.compute_tau(
                     species=species,
                     model=self.model,
                     step=step,
@@ -885,65 +870,4 @@ class CLE(object):
         self.species = species
         self.parameters = parameters
 
-
-
-
-
-
-
-
-m = Model()
-m.parameters({"K1": 0.1, "K2": 0.05})
-
-m.species({"A": 100.0, "B": 0.0}, {"A": "K2 * B - K1 * A", "B": "K1 * A - K2 * B"})
-
-m.reactions({"reaction1": "A -> B", "reaction2": "B -> A"},
-           {"reaction1": "K1 * A", "reaction2": "K2 * B"})
-
-print(m.react_sps)
-print(m.coeffs_)
-
-model1 = ODE(model=m, start=0, stop=100, epochs=1000)
-model2 = SSA(model=m, start=0, stop=100, max_epochs=100)
-model3 = TauLeaping(model=m, start=0, stop=100, max_epochs=100)
-model4 = CLE(model=m, max_epochs=100)
-
-model1.simulate()
-model2.simulate()
-model3.simulate()
-model4.simulate()
-
-
-
-
-plt.plot(model1.species["Time"], model1.species["A"], label="A")
-plt.plot(model1.species["Time"], model1.species["B"], label="B")
-plt.legend()
-plt.show()
-
-
-plt.plot(model2.species["Time"], model2.species["A"], label="A")
-plt.plot(model2.species["Time"], model2.species["B"], label="B")
-plt.legend()
-plt.show()
-
-
-plt.plot(model3.species["Time"], model3.species["A"], label="A")
-plt.plot(model3.species["Time"], model3.species["B"], label="B")
-plt.legend()
-plt.show()
-
-
-plt.plot(model4.species["Time"], model4.species["A"], label="A")
-plt.plot(model4.species["Time"], model4.species["B"], label="B")
-plt.legend()
-plt.show()
-
-
-
-
-
-
-representation = repr(m)
-print(representation)
 

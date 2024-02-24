@@ -21,12 +21,15 @@ class TauLeaping(object):
         if self.model:
             model_attributes = vars(self.model)
             self.__dict__.update(model_attributes)
+        else:
+            raise ValueError("Before simulating a model, please ensure that you have instantiated the biostoch.model.Model() object.")
 
+        self.model_name = "Tau-Leaping Algorithm"
         self.species = None
         self.parameters = None
         self.time = {}
 
-    def param_init(self, model, start, max_epochs):
+    def initialize_parameters(self, model, start, max_epochs):
 
         species = {}
         parameters = {}
@@ -173,11 +176,9 @@ class TauLeaping(object):
 
     def simulate(self):
 
-        species, parameters = self.param_init(
-            model=self.model,
-            start=self.start,
-            max_epochs=self.max_epochs,
-        )
+        start_simulation = time.time()
+
+        species, parameters = self.initialize_parameters(model=self.model, start=self.start, max_epochs=self.max_epochs)
 
         step = 1
         while step < self.max_epochs:
@@ -232,28 +233,8 @@ class TauLeaping(object):
 
         self.species = species
         self.parameters = parameters
-
-
-m = model.Model()
-m.parameters({"K1": 0.1, "K2": 0.05})
-
-m.species({"A": 100.0, "B": 0.0}, {"A": "K2 * B - K1 * A", "B": "K1 * A - K2 * B"})
-
-m.reactions({"reaction1": "A -> B", "reaction2": "B -> A"},
-           {"reaction1": "K1 * A", "reaction2": "K2 * B"})
-
-
-model3 = TauLeaping(model=m, start=0, stop=10, max_epochs=100)
-
-model3.simulate()
-
-
-plt.plot(model3.species["Time"], model3.species["A"], label="A")
-plt.plot(model3.species["Time"], model3.species["B"], label="B")
-plt.legend()
-plt.show()
-
-
+        stop_simulation = time.time()
+        self.time["Simulation Duration"] = stop_simulation - start_simulation
 
 
 

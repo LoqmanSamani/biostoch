@@ -22,6 +22,7 @@ class GillespieSimulator(object):
         else:
             raise ValueError("Before simulating a model, please ensure that you have instantiated the biostoch.model.Model() object.")
 
+        self.model_name = "Stochastic Simulation Algorithm"
         self.species = None
         self.parameters = None
         self.time = {}
@@ -199,29 +200,6 @@ class GillespieSimulator(object):
         self.time["Simulation Duration"] = stop_simulation - start_simulation
 
 
-m = model.Model()
-m.parameters({"K1": 0.1, "K2": 0.05})
 
-m.species({"A": 100.0, "B": 0.0}, {"A": "K2 * B - K1 * A", "B": "K1 * A - K2 * B"})
-
-m.reactions({"reaction1": "A -> B", "reaction2": "B -> A"},
-           {"reaction1": "K1 * A", "reaction2": "K2 * B"})
-
-model11 = []
-for i in range(10):
-    model2 = GillespieSimulator(model=m, start=0, stop=100, max_epochs=1000)
-    model2.simulate()
-    model11.append(model2.species)
-
-for mo in model11:
-    plt.plot(mo["Time"], mo["A"])
-    plt.plot(mo["Time"], mo["B"])
-
-
-plt.show()
-
-#print(len(model2.species["Time"]))
-
-#print(model2.time)
 
 
