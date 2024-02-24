@@ -20,10 +20,10 @@ class Visualization(object):
 
         if model.species and isinstance(model.species, dict):
             simulation_result = model.species
-            simulation_result["Model Name"] = model.model_name
+            simulation_result["Model Name"] = str(model.model_name)
         elif isinstance(model, dict):
             simulation_result = model
-            simulation_result["Model Name"] = self.model_name
+            simulation_result["Model Name"] = str(self.model_name)
 
         else:
             raise TypeError("Please provide the simulation result either as a model object (simulated with biostoch) or in dictionary format.")
@@ -88,7 +88,7 @@ class Visualization(object):
                         plt.plot(simulation_result["Time"], concentration, label=specie)
                         plt.xlabel("Time")
                         plt.ylabel("Concentration")
-                        plt.title(f"Simulation with {simulation_result['Model Name']}")
+                        #plt.title(f"Simulation with {simulation_result['Model Name']}")
 
                 plt.legend()
                 plt.show()
@@ -114,7 +114,7 @@ class Visualization(object):
 
                         plt.xlabel("Time")
                         plt.ylabel("Concentration")
-                        plt.title(f"Simulation with {simulation_result['Model Name']}")
+                        #plt.title(f"Simulation with {simulation_result['Model Name']}")
 
                 plt.legend()
                 plt.show()
@@ -141,7 +141,7 @@ class Visualization(object):
 
                         plt.xlabel("Time")
                         plt.ylabel("Concentration")
-                        plt.title(f"Simulation with {simulation_result['Model Name']}")
+                        #plt.title(f"Simulation with {simulation_result['Model Name']}")
 
                 plt.legend()
                 plt.show()
@@ -164,7 +164,7 @@ class Visualization(object):
                                 plt.plot(simulation_result["Time"], concentration, label=specie)
                                 plt.xlabel("Time")
                                 plt.ylabel("Concentration")
-                                plt.title(f"Simulation with {simulation_result['Model Name']}")
+                                #plt.title(f"Simulation with {simulation_result['Model Name']}")
 
                             plt.legend()
                             plt.show()

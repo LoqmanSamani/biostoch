@@ -185,3 +185,15 @@ class RungeKuttaSimulator(object):
 
 
 
+m = model.Model()
+m.parameters({"K1": 0.1, "K2": 0.05})
+
+m.species({"A": 100.0, "B": 0.0}, {"A": "K2 * B - K1 * A", "B": "K1 * A - K2 * B"})
+
+m.reactions({"reaction1": "A -> B", "reaction2": "B -> A"},
+           {"reaction1": "K1 * A", "reaction2": "K2 * B"})
+
+
+model1 = EulerSimulator(model=m, start=0, stop=100, epochs=1000)
+
+print(model1.model_name)
