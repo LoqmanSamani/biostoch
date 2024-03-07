@@ -1,7 +1,7 @@
 Change Log
 ==========
-0.0.1 (28/12/2023)
+0.0.2 (07/03/2024)
 -----------------
-- The first release of BioStoch library.
+- The second release of biostoch library.
 
 
