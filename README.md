@@ -2,6 +2,7 @@
 # BioStoch
 ### Simulation in Biology
 
+![ssa1.png](https://github.com/LoqmanSamani/biostoch/blob/systembiology/examples/plots/ssa1.png)
 
 ### Overview
 
