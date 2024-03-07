@@ -1,6 +1,6 @@
 
 # BioStoch
-### Simulation in Biology
+<p><b>Simulation in Biology<p></p>
 
 ![ssa1.png](https://github.com/LoqmanSamani/biostoch/blob/systembiology/examples/plots/ssa1.png)
 <p><i>Simulated with GillespySimulator: Concentration trajectories of species A and B over time. Ten independent simulations were performed, each represented by a different line color<i></p>
@@ -115,6 +115,6 @@ cle_plot.plot()
 
 ```
 
-License
+### License
 
 This project is licensed under the [MIT License](https://github.com/LoqmanSamani/biostoch/blob/systembiology/LICENSE)
