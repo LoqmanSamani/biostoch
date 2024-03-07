@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 
 
-VERSION = '0.0.1'
+VERSION = '0.0.2'
 DESCRIPTION = 'Stochastic and Deterministic Simulation Methods Used in Computational Biology'
 LONG_DESCRIPTION = README.md
 
@@ -22,7 +22,7 @@ setup(
     long_description_content_type="text/markdown",
     long_description=LONG_DESCRIPTION,
     packages=find_packages(),
-    install_requires=["pandas", "numpy", "seaborn", "matplotlib"],
+    install_requires=["numpy", "matplotlib"],
     keywords=['Stochastic Simulation', 'Deterministic Simulation', 'Computational Biology'],
     classifiers=[
         "Development Status :: 1 - Planning",
