@@ -69,7 +69,7 @@ euler_model = EulerSimulator(
     model=model, 
     start=0, 
     stop=100, 
-    max_epochs=1000
+    epochs=1000
 )
 euler_model.reset() # Reset the model to initialize if it has been used before
 euler_model.simulate() # Simulate the model 
@@ -77,25 +77,49 @@ euler_model.species # Print the model species after the simulation, a dictionary
 euler_model.time # Show how long the simulation took to complete
 
 # Simulate the model using ordinary differential equations (ODE) with the Runge-Kutta method
-runge_model = RungeKuttaSimulator(model=model, start=0, stop=100, epochs=1000)
+runge_model = RungeKuttaSimulator(
+    model=model, 
+    start=0, 
+    stop=100, 
+    epochs=1000
+)
+
 runge_model.simulate()
 runge_model.species
 runge_model.time
 
 # Simulate the model using the Stochastic Simulation Algorithm (SSA)
-ssa_model = GillespieSimulator(model=model, start=0, stop=100, max_epochs=1000)
+ssa_model = GillespieSimulator(
+    model=model, 
+    start=0, 
+    stop=100, 
+    max_epochs=1000
+)
+
 ssa_model.simulate()
 ssa_model.species
 ssa_model.time
 
 # Simulate the model using the Tau-Leaping method
-tau_model = TauLeaping(model=model, start=0, stop=100, max_epochs=100)
+tau_model = TauLeaping(
+    model=model, 
+    start=0, 
+    stop=100, 
+    max_epochs=100
+)
+
 tau_model.simulate()
 tau_model.species
 tau_model.time
 
 # Simulate the model using the Chemical Langevin Equation method
-cle_model = ChemicalLangevin(model=model, stop=100, max_epochs=1000)
+cle_model = ChemicalLangevin(
+    model=model,
+    start=0,
+    stop=100, 
+    max_epochs=1000
+)
+
 cle_model.simulate()
 cle_model.species
 cle_model.time
