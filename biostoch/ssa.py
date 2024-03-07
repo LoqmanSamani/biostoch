@@ -1,5 +1,7 @@
 import numpy as np
+import model
 import time
+import matplotlib.pyplot as plt
 
 
 
@@ -209,7 +211,6 @@ class GillespieSimulator(object):
         self.parameters = parameters
         stop_simulation = time.time()
         self.time["Simulation Duration"] = stop_simulation - start_simulation
-
 
 
 
