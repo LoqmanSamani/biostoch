@@ -2,11 +2,10 @@
 # BioStoch
 ### Simulation in Biology
 
-![Simulated with GillespySimulator: Concentration trajectories of species A and B over time. Ten independent simulations were performed, each represented by a different line color.](https://github.com/LoqmanSamani/biostoch/blob/systembiology/examples/plots/ssa1.png)
-
-
 ![ssa1.png](https://github.com/LoqmanSamani/biostoch/blob/systembiology/examples/plots/ssa1.png)
-simulated with GillespySimulator (10 times simulations the system)
+<p><i>Simulated with GillespySimulator: Concentration trajectories of species A and B over time. Ten independent simulations were performed, each represented by a different line color<i></p>
+
+
 ### Overview
 
 `biostoch` is a Python library for simulating chemical and biological models using various deterministic and stochastic methods. It provides implementations of methods such as Euler's method, the Runge-Kutta algorithm, the Stochastic Simulation Algorithm (SSA), Tau-Leaping, and the Chemical Langevin Equation (CLE). These methods can be used to model and analyze the dynamics of biochemical reactions, gene regulatory networks, and other biological systems.
