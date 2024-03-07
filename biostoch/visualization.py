@@ -192,41 +192,6 @@ class Visualization(object):
 
 
 
-m = model.Model()
-m.parameters({"K1": 0.1, "K2": 0.05})
-
-m.species({"A": 100.0, "B": 0.0}, {"A": "K2 * B - K1 * A", "B": "K1 * A - K2 * B"})
-
-m.reactions({"reaction1": "A -> B", "reaction2": "B -> A"},
-           {"reaction1": "K1 * A", "reaction2": "K2 * B"})
-
-
-model1 = ode.EulerSimulator(model=m, start=0, stop=100, epochs=1000)
-model2 = ode.RungeKuttaSimulator(model=m, start=0, stop=100, epochs=1000)
-model3 = ssa.GillespieSimulator(model=m, start=0, stop=100, max_epochs=1000)
-model4 = tau_leaping.TauLeaping(model=m, start=0, stop=100, max_epochs=100)
-model5 = cle.ChemicalLangevin(model=m, stop=100, max_epochs=1000)
-
-model1.simulate()
-model2.simulate()
-model3.simulate()
-model4.simulate()
-model5.simulate()
-
-model11 = Visualization(model1, model_name="Euler_Method")
-model12 = Visualization(model2, model_name="Runge_Kutta_Algorithm")
-model13 = Visualization(model3, model_name="Stochastic_Simulation_Algorithm")
-model14 = Visualization(model4, model_name="Tau_Leaping_Algorithm")
-model15 = Visualization(model5, model_name="Chemical_Langevin_Equation")
-
-model11.plot()
-model12.plot()
-model13.plot()
-model14.plot()
-model15.plot()
-
-
-
 
 
 

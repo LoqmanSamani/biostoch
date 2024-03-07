@@ -1,6 +1,6 @@
 import numpy as np
-import model
 import time
+
 
 
 class GillespieSimulator(object):
@@ -31,6 +31,7 @@ class GillespieSimulator(object):
         self.parameters = None
         self.time = {}
 
+
     def initialize_parameters(self, model, start, max_epochs):
 
         species = {}
@@ -47,6 +48,7 @@ class GillespieSimulator(object):
             parameters[parameter] = getattr(model, parameter)
 
         return species, parameters
+
 
     def compute_propensity_sum(self, step, propensities, species, parameters):
 
@@ -66,11 +68,13 @@ class GillespieSimulator(object):
 
         return propensity_sum, propensities_
 
+
     def compute_tau(self, propensity_sum, gamma):
 
         tau = np.random.exponential(scale=1 / (propensity_sum + gamma))
 
         return tau
+
 
     def update(self, species, model, reaction, num_reaction, propensities, step, tau):
 
@@ -124,6 +128,7 @@ class GillespieSimulator(object):
 
         return species
 
+
     def resize_species(self, species, step):
 
         if step >= len(species["Time"]):
@@ -136,12 +141,14 @@ class GillespieSimulator(object):
 
         return species
 
+
     def final_resize_species(self, species, final_step):
 
         for specie in species.keys():
             species[specie] = species[specie][:final_step]
 
         return species
+
 
     def simulate(self):
 
@@ -202,6 +209,7 @@ class GillespieSimulator(object):
         self.parameters = parameters
         stop_simulation = time.time()
         self.time["Simulation Duration"] = stop_simulation - start_simulation
+
 
 
 

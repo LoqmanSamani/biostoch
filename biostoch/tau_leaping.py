@@ -34,6 +34,7 @@ class TauLeaping(object):
         self.parameters = None
         self.time = {}
 
+
     def initialize_parameters(self, model, start, max_epochs):
 
         species = {}
@@ -48,6 +49,7 @@ class TauLeaping(object):
             parameters[parameter] = getattr(model, parameter)
 
         return species, parameters
+
 
     def compute_propensity_sum(self, species, parameters, propensities, step):
 
@@ -66,6 +68,7 @@ class TauLeaping(object):
             propensities_[reaction] = propensity_
 
         return propensity_sum, propensities_
+
 
     def compute_tau(self, species, model, step, epsilon):
 
@@ -111,6 +114,7 @@ class TauLeaping(object):
 
         return min(tau_values)
 
+
     def compute_lambdas(self, species, parameters, propensities, tau, step):
 
         last_step = {}
@@ -134,12 +138,14 @@ class TauLeaping(object):
 
         return lambdas
 
+
     def num_reaction(self, lambdas):
         num_reaction_ = {}
         for reaction, lambda_ in lambdas.items():
             num_reaction_[reaction] = np.random.poisson(lambda_)
 
         return num_reaction_
+
 
     def update(self, species, model, num_reaction, step, tau):
 
@@ -162,6 +168,7 @@ class TauLeaping(object):
 
         return species
 
+
     def resize_species(self, species, step):
 
         if step >= len(species["Time"]):
@@ -174,10 +181,12 @@ class TauLeaping(object):
 
         return species
 
+
     def final_resize_species(self, species, final_step):
         for specie in species.keys():
             species[specie] = species[specie][:final_step]
         return species
+
 
     def simulate(self):
 

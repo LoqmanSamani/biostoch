@@ -3,6 +3,7 @@ import model
 import time
 
 
+
 class ChemicalLangevin(object):
     def __init__(self, model=None, start=0.0, stop=10.0, max_epochs=100, seed=42, steady_state=None, **kwargs):
 
@@ -52,6 +53,7 @@ class ChemicalLangevin(object):
 
         return species, parameters
 
+
     def compute_change(self, model, species, tau, step):
 
         changes = {}
@@ -68,6 +70,7 @@ class ChemicalLangevin(object):
 
         return changes, terms
 
+
     def compute_noise(self, model, terms, tau):
 
         noises = {}
@@ -78,6 +81,7 @@ class ChemicalLangevin(object):
 
         return noises
 
+
     def compute_changes(self, noises, changes):
 
         changes_ = {}
@@ -86,6 +90,7 @@ class ChemicalLangevin(object):
             changes_[reaction] = noises[reaction] + changes[reaction]
 
         return changes_
+
 
     def update(self, species, model, changes_, step, tau):
 
@@ -110,6 +115,7 @@ class ChemicalLangevin(object):
 
         return species
 
+
     def resize_species(self, species, step):
 
         if step >= len(species["Time"]):
@@ -122,10 +128,12 @@ class ChemicalLangevin(object):
 
         return species
 
+
     def final_resize_species(self, species, final_step):
         for specie in species.keys():
             species[specie] = species[specie][:final_step]
         return species
+
 
     def simulate(self):
 
