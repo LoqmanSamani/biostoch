@@ -1,12 +1,10 @@
-import numpy as np
 import matplotlib.pyplot as plt
-import seaborn
-
 import model
 import ode
 import ssa
 import tau_leaping
 import cle
+
 
 class Visualization(object):
     def __init__(self, model=None, model_name="Simulation Result", *args):
@@ -64,16 +62,18 @@ class Visualization(object):
 
         if biostoch_model:
             if simulation_result["Model Name"] == "Runge-Kutta Algorithm" or simulation_result["Model Name"] == "Euler Method":
+                title = simulation_result["Model Name"]
                 if plot_size:
                     plt.figure(figsize=plot_size)
                 else:
                     plt.figure(figsize=(10, 8))
                 for specie, concentration in simulation_result.items():
-                    if specie != "Time" and specie == "Model Name":
+
+                    if specie != "Time" and specie != "Model Name":
                         plt.plot(simulation_result["Time"], concentration, label=specie)
                         plt.xlabel("Time")
                         plt.ylabel("Concentration")
-                        plt.title(f"Simulation with {simulation_result['Model Name']}")
+                        plt.title(f"Simulation with {title}")
 
                 plt.legend()
                 plt.show()
@@ -84,11 +84,11 @@ class Visualization(object):
                 else:
                     plt.figure(figsize=(10, 8))
                 for specie, concentration in simulation_result.items():
-                    if specie != "Time" and specie == "Model Name":
+                    if specie != "Time" and specie != "Model Name":
                         plt.plot(simulation_result["Time"], concentration, label=specie)
                         plt.xlabel("Time")
                         plt.ylabel("Concentration")
-                        #plt.title(f"Simulation with {simulation_result['Model Name']}")
+                        plt.title(f"Simulation with {simulation_result['Model Name']}")
 
                 plt.legend()
                 plt.show()
@@ -101,7 +101,7 @@ class Visualization(object):
                     plt.figure(figsize=(10, 8))
 
                 for specie, concentration in simulation_result.items():
-                    if specie != "Time" and specie == "Model Name":
+                    if specie != "Time" and specie != "Model Name":
 
                         plt.plot(
                             simulation_result["Time"],
@@ -109,12 +109,12 @@ class Visualization(object):
                             label=specie,
                             marker='o',
                             linestyle='dashed',
-                            markersize=6
+                            markersize=4
                         )
 
                         plt.xlabel("Time")
                         plt.ylabel("Concentration")
-                        #plt.title(f"Simulation with {simulation_result['Model Name']}")
+                        plt.title(f"Simulation with {simulation_result['Model Name']}")
 
                 plt.legend()
                 plt.show()
@@ -128,7 +128,7 @@ class Visualization(object):
 
                 for specie, concentration in simulation_result.items():
 
-                    if specie != "Time" and specie == "Model Name":
+                    if specie != "Time" and specie != "Model Name":
 
                         plt.plot(
                             simulation_result["Time"],
@@ -136,12 +136,12 @@ class Visualization(object):
                             label=specie,
                             marker='o',
                             linestyle='dashed',
-                            markersize=6
+                            markersize=2
                         )
 
                         plt.xlabel("Time")
                         plt.ylabel("Concentration")
-                        #plt.title(f"Simulation with {simulation_result['Model Name']}")
+                        plt.title(f"Simulation with {simulation_result['Model Name']}")
 
                 plt.legend()
                 plt.show()
@@ -164,7 +164,7 @@ class Visualization(object):
                                 plt.plot(simulation_result["Time"], concentration, label=specie)
                                 plt.xlabel("Time")
                                 plt.ylabel("Concentration")
-                                #plt.title(f"Simulation with {simulation_result['Model Name']}")
+                                plt.title(f"Simulation with {simulation_result['Model Name']}")
 
                             plt.legend()
                             plt.show()
@@ -205,12 +205,13 @@ model1 = ode.EulerSimulator(model=m, start=0, stop=100, epochs=1000)
 model2 = ode.RungeKuttaSimulator(model=m, start=0, stop=100, epochs=1000)
 model3 = ssa.GillespieSimulator(model=m, start=0, stop=100, max_epochs=1000)
 model4 = tau_leaping.TauLeaping(model=m, start=0, stop=100, max_epochs=100)
-model5 = cle.ChemicalLangevin(model=m, max_epochs=100)
+model5 = cle.ChemicalLangevin(model=m, stop=100, max_epochs=1000)
 
 model1.simulate()
 model2.simulate()
 model3.simulate()
 model4.simulate()
+model5.simulate()
 
 model11 = Visualization(model1, model_name="Euler_Method")
 model12 = Visualization(model2, model_name="Runge_Kutta_Algorithm")

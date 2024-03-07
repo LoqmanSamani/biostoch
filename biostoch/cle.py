@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import model
 import time
 
@@ -26,6 +25,13 @@ class ChemicalLangevin(object):
         self.species = None
         self.parameters = None
         self.time = {}
+
+
+    def reset(self):
+        self.species = None
+        self.parameters = None
+        self.time = {}
+
 
     def initialize_parameters(self, model, start, max_epochs):
 

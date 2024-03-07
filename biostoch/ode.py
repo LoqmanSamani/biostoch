@@ -1,6 +1,5 @@
 import numpy as np
 import model
-import matplotlib.pyplot as plt
 import time
 
 
@@ -20,6 +19,11 @@ class EulerSimulator(object):
             raise ValueError("Before simulating a model, please ensure that you have instantiated the biostoch.model.Model() object.")
 
         self.model_name = "Euler Method"
+        self.species = None
+        self.parameters = None
+        self.time = {}
+
+    def reset(self):
         self.species = None
         self.parameters = None
         self.time = {}
@@ -106,6 +110,11 @@ class RungeKuttaSimulator(object):
             raise ValueError("Before simulating a model, please ensure that you have instantiated the biostoch.model.Model() object.")
 
         self.model_name = "Runge-Kutta Algorithm"
+        self.species = None
+        self.parameters = None
+        self.time = {}
+
+    def reset(self):
         self.species = None
         self.parameters = None
         self.time = {}

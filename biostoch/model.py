@@ -49,6 +49,17 @@ class Model(object):
         return (f"Model: {self.signs}, {params}, {components}, {ROC_}, "
                 f"{react_names}, {reacts_}, {coeffs_}, {react_sps}, {rates_}")
 
+    def reset(self):
+
+        self.params = None
+        self.components = None
+        self.ROC_ = None
+        self.react_names = None
+        self.reacts_ = None
+        self.coeffs_ = None
+        self.reset_sps = None
+        self.rates = None
+
     def parameters(self, params):
         """
         params: A dictionary containing all rate constants in the system.

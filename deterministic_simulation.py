@@ -58,8 +58,6 @@ num_steps = 1000
 f = ode_simulator(sp1_0, sp2_0, k_1, k_2, t_0, t_end, num_steps)    
 
 
-# In[27]:
-
 
 # Using numpy, matplotlib and scipy
 def ode_simulator(sp1_0, sp2_0, k_1, k_2, t_0, t_end, num_steps):
@@ -97,7 +95,6 @@ def ode_simulator(sp1_0, sp2_0, k_1, k_2, t_0, t_end, num_steps):
 model = ode_simulator(sp1_0, sp2_0, k_1, k_2, t_0, t_end, num_steps)    
 
 
-# In[28]:
 
 
 # Using matplotlib and tellurium
@@ -132,8 +129,6 @@ def ode_simulator(sp1_0, sp2_0, k_1, k_2, t_0, t_end, num_steps):
 
 model = ode_simulator(sp1_0, sp2_0, k_1, k_2, t_0, t_end, num_steps)    
 
-
-# In[36]:
 
 
 # Using gillespy2

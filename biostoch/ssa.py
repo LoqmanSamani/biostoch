@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import model
 import time
 
@@ -23,6 +22,11 @@ class GillespieSimulator(object):
             raise ValueError("Before simulating a model, please ensure that you have instantiated the biostoch.model.Model() object.")
 
         self.model_name = "Stochastic Simulation Algorithm"
+        self.species = None
+        self.parameters = None
+        self.time = {}
+
+    def reset(self):
         self.species = None
         self.parameters = None
         self.time = {}

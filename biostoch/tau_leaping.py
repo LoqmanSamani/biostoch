@@ -1,7 +1,7 @@
 import numpy as np
 import time
 import model
-import matplotlib.pyplot as plt
+
 
 
 class TauLeaping(object):
@@ -25,6 +25,11 @@ class TauLeaping(object):
             raise ValueError("Before simulating a model, please ensure that you have instantiated the biostoch.model.Model() object.")
 
         self.model_name = "Tau-Leaping Algorithm"
+        self.species = None
+        self.parameters = None
+        self.time = {}
+
+    def reset(self):
         self.species = None
         self.parameters = None
         self.time = {}

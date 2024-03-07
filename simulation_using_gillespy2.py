@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
 
 """
 Simulate a simple system using different simulation methods in gillespy2 package with just two   species 
@@ -142,10 +137,4 @@ plt.legend()
 
 plt.plot()
     
-
-
-# In[ ]:
-
-
-
 
