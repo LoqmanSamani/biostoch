@@ -1,14 +1,23 @@
 import numpy as np
 import time
-import model
-
 
 
 class TauLeaping(object):
+
     """ Simulation using Tau-Leaping method """
 
-    def __init__(self, model=None, start=0.0, stop=10.0, max_epochs=100, seed=42,
-                 steady_state=None, epsilon=0.03, call_tau=None, **kwargs):
+    def __init__(
+        self,
+        model=None,
+        start=0.0,
+        stop=10.0,
+        max_epochs=100,
+        seed=42,
+        steady_state=None,
+        epsilon=0.03,
+        call_tau=None,
+        **kwargs
+    ):
 
         self.model = model
         self.start = start

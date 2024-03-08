@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
     LONG_DESCRIPTION = fh.read()
 
 
-VERSION = '0.0.4'
+VERSION = '0.0.5'
 DESCRIPTION = 'Stochastic and Deterministic Simulation Methods Used in Computational Biology'
 HOMEPAGE = "https://github.com/LoqmanSamani/biostoch"
 

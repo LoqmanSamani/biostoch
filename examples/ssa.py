@@ -2,8 +2,6 @@ import matplotlib.pyplot as plt
 from biostoch.model import Model
 from biostoch.ssa import GillespieSimulator
 
-
-
 obj = Model()
 
 obj.parameters({"K1": 0.1, "K2": 0.05})

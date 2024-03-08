@@ -1,13 +1,14 @@
 import matplotlib.pyplot as plt
-import model
-import ode
-import ssa
-import tau_leaping
-import cle
+import numpy as np
 
 
 class Visualization(object):
-    def __init__(self, model=None, model_name="Simulation Result", *args):
+    def __init__(
+            self,
+            model=None,
+            model_name="Simulation Result",
+            **kwargs
+    ):
 
         self.model = model
         self.model_name = model_name
@@ -186,23 +187,6 @@ class Visualization(object):
                                     plt.plot(x, y[i])
 
                                 plt.show()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: biostoch
-Version: 0.0.3
+Version: 0.0.5
 Summary: Stochastic and Deterministic Simulation Methods Used in Computational Biology
 Home-page: https://github.com/LoqmanSamani/biostoch
 Author: Loghman Samani
@@ -14,6 +14,8 @@ Classifier: Operating System :: MacOS :: MacOS X
 Classifier: Operating System :: Microsoft :: Windows
 Description-Content-Type: text/markdown
 License-File: LICENSE
+Requires-Dist: numpy
+Requires-Dist: matplotlib
 
 
 # BioStoch

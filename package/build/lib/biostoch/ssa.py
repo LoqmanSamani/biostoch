@@ -1,15 +1,23 @@
 import numpy as np
-import model
 import time
-import matplotlib.pyplot as plt
+
 
 
 
 class GillespieSimulator(object):
     """ Simulation using Stochastic Simulation Algorithm """
 
-    def __init__(self, model=None, start=0, stop=10, max_epochs=100,
-                 seed=42, steady_state=None, gamma=1e-30, **kwargs):
+    def __init__(
+        self,
+        model=None,
+        start=0,
+        stop=10,
+        max_epochs=100,
+        seed=42,
+        steady_state=None,
+        gamma=1e-30,
+        **kwargs
+    ):
 
         self.model = model
         self.start = start

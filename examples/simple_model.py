@@ -1,6 +1,3 @@
-import numpy
-import matplotlib
-import time
 from biostoch.model import Model
 from biostoch.ode import EulerSimulator, RungeKuttaSimulator
 from biostoch.ssa import GillespieSimulator

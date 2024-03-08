@@ -1,12 +1,20 @@
 import numpy as np
-import model
 import time
 
 
 class EulerSimulator(object):
-    """ Simulation using Euler and Runge-Kutta methods """
 
-    def __init__(self, model=None, start=0, stop=10, epochs=1000, seed=42, **kwargs):
+    """ Simulation using Euler method """
+
+    def __init__(
+        self,
+        model=None,
+        start=0,
+        stop=10,
+        epochs=1000,
+        seed=42,
+        **kwargs
+    ):
 
         self.model = model
         self.start = start
@@ -93,7 +101,18 @@ class EulerSimulator(object):
 
 
 class RungeKuttaSimulator(object):
-    def __init__(self, model=None, start=0, stop=10, epochs=1000, seed=42, **kwargs):
+
+    """ Simulation using Runge Kutta method """
+
+    def __init__(
+        self,
+        model=None,
+        start=0,
+        stop=10,
+        epochs=1000,
+        seed=42,
+        **kwargs
+        ):
 
         self.model = model
         self.start = start
