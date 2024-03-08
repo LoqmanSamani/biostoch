@@ -126,10 +126,10 @@ cle_model.time
 
 # Visualize the simulated models using integrated matplotlib.pyplot in biostoch
 euler_plot = Visualization(euler_model)
-runge_plot = Visualization(euler_model)
-ssa_plot = Visualization(euler_model)
-tau_plot = Visualization(euler_model)
-cle_plot = Visualization(euler_model)
+runge_plot = Visualization(runge_model)
+ssa_plot = Visualization(ssa_model)
+tau_plot = Visualization(tau_model)
+cle_plot = Visualization(cle_model)
 
 euler_plot.plot()
 runge_plot.plot()
