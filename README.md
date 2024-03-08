@@ -2,7 +2,7 @@
 # BioStoch
 <p><b>Simulation in Biology<p></p>
 
-![ssa1.png](https://github.com/LoqmanSamani/biostoch/blob/systembiology/examples/plots/ssa1.png)
+![ssa1.png](https://github.com/LoqmanSamani/biostoch/examples/plots/ssa1.png)
 <p><i>Simulated with GillespySimulator: Concentration trajectories of species A and B over time. Ten independent simulations were performed, each represented by a different line color<i></p>
 
 

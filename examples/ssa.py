@@ -5,6 +5,7 @@ from biostoch.ssa import GillespieSimulator
 
 
 obj = Model()
+
 obj.parameters({"K1": 0.1, "K2": 0.05})
 
 obj.species(components={"A": 100.0, "B": 0.0}, rate_change={"A": "K2 * B - K1 * A", "B": "K1 * A - K2 * B"})
