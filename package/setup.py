@@ -1,14 +1,12 @@
 from setuptools import setup, find_packages
 
 
+with open("README.md", "r") as fh:
+    LONG_DESCRIPTION = fh.read()
 
 
 VERSION = '0.0.2'
 DESCRIPTION = 'Stochastic and Deterministic Simulation Methods Used in Computational Biology'
-LONG_DESCRIPTION = README.md
-
-
-
 HOMEPAGE = "https://github.com/LoqmanSamani/biostoch"
 
 # Setting up
@@ -21,7 +19,8 @@ setup(
     description=DESCRIPTION,
     long_description_content_type="text/markdown",
     long_description=LONG_DESCRIPTION,
-    packages=find_packages(),
+    packages=find_packages(where='biostoch'),
+    include_package_data=True,
     install_requires=["numpy", "matplotlib"],
     keywords=['Stochastic Simulation', 'Deterministic Simulation', 'Computational Biology'],
     classifiers=[
