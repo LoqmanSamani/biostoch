@@ -139,6 +139,8 @@ cle_plot.plot()
 
 ```
 
+### [GitHub Repository](https://github.com/LoqmanSamani/biostoch) of the biostoch
+
 ### License
 
 This project is licensed under the [MIT License](https://github.com/LoqmanSamani/biostoch/blob/systembiology/LICENSE)
