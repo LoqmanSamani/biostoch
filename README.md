@@ -10,6 +10,11 @@
 
 `biostoch` is a Python library for simulating chemical and biological models using various deterministic and stochastic methods. It provides implementations of methods such as Euler's method, the Runge-Kutta algorithm, the Stochastic Simulation Algorithm (SSA), Tau-Leaping, and the Chemical Langevin Equation (CLE). These methods can be used to model and analyze the dynamics of biochemical reactions, gene regulatory networks, and other biological systems.
 
+### Article
+
+- [Introducing BioStoch: A Python Library for Simulating Biological Systems](https://medium.com/@samaniloqman91/introducing-biostoch-a-python-library-for-simulating-biological-systems-5d38df9b6991) is the  article, which was published on Towards Data Science, provides an exploration of the mathematical bases behind various simulation methods used by BioStoch. From deterministic to stochastic algorithms, learn how to use the library to model biological systems.
+
+
 ### Installation
 
 Install `biostoch` and its dependencies using pip:
