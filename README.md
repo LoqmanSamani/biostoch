@@ -8,7 +8,7 @@
 
 ### Overview
 
-`biostoch` is a Python library for simulating chemical and biological models using various deterministic and stochastic methods. It provides implementations of methods such as Euler's method, the Runge-Kutta algorithm, the Stochastic Simulation Algorithm (SSA), Tau-Leaping, and the Chemical Langevin Equation (CLE). These methods can be used to model and analyze the dynamics of biochemical reactions, gene regulatory networks, and other biological systems.
+- `biostoch` is a Python library for simulating chemical and biological models using various deterministic and stochastic methods. It provides implementations of methods such as Euler's method, the Runge-Kutta algorithm, the Stochastic Simulation Algorithm (SSA), Tau-Leaping, and the Chemical Langevin Equation (CLE). These methods can be used to model and analyze the dynamics of biochemical reactions, gene regulatory networks, and other biological systems.
 
 ### Article
 
@@ -17,7 +17,7 @@
 
 ### Installation
 
-Install `biostoch` and its dependencies using pip:
+- Install `biostoch` and its dependencies using pip:
 
 ```bash
 pip install numpy matplotlib 
@@ -146,4 +146,4 @@ cle_plot.plot()
 
 ### License
 
-This project is licensed under the [MIT License](https://github.com/LoqmanSamani/biostoch/blob/systembiology/LICENSE)
+- This project is licensed under the [MIT License](https://github.com/LoqmanSamani/biostoch/blob/systembiology/LICENSE)
