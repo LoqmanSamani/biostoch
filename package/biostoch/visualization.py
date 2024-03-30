@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-import numpy as np
+
 
 
 class Visualization(object):
@@ -14,8 +14,6 @@ class Visualization(object):
         self.model_name = model_name
 
     def extract_species(self, model):
-
-        simulation_result = None
 
         if model.species and isinstance(model.species, dict):
             simulation_result = model.species

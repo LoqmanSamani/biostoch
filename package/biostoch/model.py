@@ -1,6 +1,6 @@
 class Model(object):
 
-    """ Define biological or chemical system """
+    """ Defines biological or chemical system """
 
     def __init__(self, signs=None):
 

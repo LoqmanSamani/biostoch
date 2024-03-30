@@ -1,11 +1,11 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import time
+import matplotlib.pyplot as plt
 
 
 class Model(object):
 
-    """ Define biological or chemical system """
+    """ Defines biological or chemical system """
 
     def __init__(self, signs=None):
 
@@ -244,19 +244,18 @@ class Model(object):
 
 
 
-
 class EulerSimulator(object):
-
     """ Simulation using Euler method """
 
     def __init__(
-        self,
-        model=None,
-        start=0,
-        stop=10,
-        epochs=1000,
-        seed=42,
-        **kwargs
+            self,
+            model=None,
+            start=0,
+            stop=10,
+            epochs=1000,
+            seed=42,
+            model_name="Euler Method",
+            **kwargs
     ):
 
         self.model = model
@@ -264,24 +263,62 @@ class EulerSimulator(object):
         self.stop = stop
         self.epochs = epochs
         self.seed = seed
+        self.model_name = model_name
 
         if self.model:
             model_attributes = vars(self.model)
             self.__dict__.update(model_attributes)
         else:
-            raise ValueError("Before simulating a model, please ensure that you have instantiated the biostoch.model.Model() object.")
+            raise ValueError(
+                "Before simulating a model, please ensure that you have instantiated the biostoch.model.Model() object.")
 
-        self.model_name = "Euler Method"
-        self.species = None
-        self.parameters = None
+        self.species = {}
+        self.parameters = {}
         self.time = {}
 
+        """
+        Args:
+            model: a class created by "biostoch.model.Model",
+                   contains all necessary information used in simulation with SSA.
+            start: an integer or a float that defines the start time of the simulation.
+            stop: an integer or a float that defines the stop time of the simulation.
+            epochs: an integer defines the number of iterations.
+            seed: an integer parameter used to initialize the random number generator.
+            model_name: the name of the simulation method "Stochastic Simulation Algorithm".
+            **kwargs: a special parameter that allows passing additional keyword arguments to the function.
+
+            species: an empty dictionary in which the calculated concentrations of the species are stored.
+            parameters: an empty dictionary in which the rate constants of the model are stored.
+            time: an empty dictionary in which the simulation duration is stored. 
+        """
+
     def reset(self):
-        self.species = None
-        self.parameters = None
+
+        """ Resets the model species and parameters dictionaries"""
+
+        self.species = {}
+        self.parameters = {}
         self.time = {}
 
     def initialize_parameters(self, model, start, stop, epochs):
+
+        """
+        Initializes the model species dictionary
+
+        Args:
+            model: a class created by "biostoch.model.Model"
+                   contains all necessary information used in simulation with SSA.
+            start: an integer or a float that defines the start time of the simulation.
+            stop: an integer or a float that defines the stop time of the simulation.
+            epochs: an integer defines the number of iterations.
+        Returns:
+            species: a dictionary contains initialized concentration of each
+                     species and also initialized simulation time in the system.
+                     each dictionary's key is the name of one species
+                     and each value the corresponding initialized concentration.
+            parameters: a dictionary contains the rate constant of each reaction each key
+                        correspond to the name of the rate constant and each value is its value.
+        """
 
         species = {}
         parameters = {}
@@ -296,6 +333,19 @@ class EulerSimulator(object):
         return species, parameters
 
     def compute_rates(self, species, model, step):
+
+        """
+
+        Args:
+            species: a dictionary in which the calculated concentrations of the species are stored.
+            model: a class created by "biostoch.model.Model".
+            step: integer that represents the current iteration number or time step in the simulation process.
+
+        Returns:
+            rates: a dictionary containing the calculated rates of each reaction at the current time step.
+
+        """
+
         rates = {}
         for specie in species.keys():
             if specie != "Time":
@@ -315,10 +365,17 @@ class EulerSimulator(object):
         return rates
 
     def simulate(self):
+
+        """Runs the simulation"""
+
         start_simulation = time.time()
 
-        species, parameters = self.initialize_parameters(model=self.model, start=self.start, stop=self.stop,
-                                                         epochs=self.epochs)
+        species, parameters = self.initialize_parameters(
+            model=self.model,
+            start=self.start,
+            stop=self.stop,
+            epochs=self.epochs
+        )
 
         tau = species["Time"][3] - species["Time"][2]
 
@@ -344,42 +401,80 @@ class EulerSimulator(object):
 
 
 class RungeKuttaSimulator(object):
-
     """ Simulation using Runge Kutta method """
 
     def __init__(
-        self,
-        model=None,
-        start=0,
-        stop=10,
-        epochs=1000,
-        seed=42,
-        **kwargs
-        ):
+            self,
+            model=None,
+            start=0,
+            stop=10,
+            epochs=1000,
+            seed=42,
+            model_name="Runge-Kutta Algorithm",
+            **kwargs
+    ):
 
         self.model = model
         self.start = start
         self.stop = stop
         self.epochs = epochs
         self.seed = seed
+        self.model_name = model_name
 
         if self.model:
             model_attributes = vars(self.model)
             self.__dict__.update(model_attributes)
         else:
-            raise ValueError("Before simulating a model, please ensure that you have instantiated the biostoch.model.Model() object.")
+            raise ValueError(
+                "Before simulating a model, please ensure that you have instantiated the biostoch.model.Model() object.")
 
-        self.model_name = "Runge-Kutta Algorithm"
-        self.species = None
-        self.parameters = None
+        self.species = {}
+        self.parameters = {}
         self.time = {}
 
+        """
+        Args:
+            model: a class created by "biostoch.model.Model",
+                   contains all necessary information used in simulation with SSA.
+            start: an integer or a float that defines the start time of the simulation.
+            stop: an integer or a float that defines the stop time of the simulation.
+            epochs: an integer defines the number of iterations.
+            seed: an integer parameter used to initialize the random number generator.
+            model_name: the name of the simulation method "Stochastic Simulation Algorithm".
+            **kwargs: a special parameter that allows passing additional keyword arguments to the function.
+
+            species: an empty dictionary in which the calculated concentrations of the species are stored.
+            parameters: an empty dictionary in which the rate constants of the model are stored.
+            time: an empty dictionary in which the simulation duration is stored. 
+        """
+
     def reset(self):
-        self.species = None
-        self.parameters = None
+
+        """ Resets the model species and parameters dictionaries"""
+
+        self.species = {}
+        self.parameters = {}
         self.time = {}
 
     def initialize_parameters(self, model, start, stop, epochs):
+
+        """
+        Initializes the model species dictionary
+
+            Args:
+                model: a class created by "biostoch.model.Model"
+                       contains all necessary information used in simulation with SSA.
+                start: an integer or a float that defines the start time of the simulation.
+                stop: an integer or a float that defines the stop time of the simulation.
+                epochs: an integer defines the number of iterations.
+            Returns:
+                species: a dictionary contains initialized concentration of each
+                         species and also initialized simulation time in the system.
+                         each dictionary's key is the name of one species
+                         and each value the corresponding initialized concentration.
+                parameters: a dictionary contains the rate constant of each reaction each key
+                            correspond to the name of the rate constant and each value is its value.
+        """
 
         species = {}
         parameters = {}
@@ -394,6 +489,19 @@ class RungeKuttaSimulator(object):
         return species, parameters
 
     def compute_rates(self, species, model, step):
+
+        """
+
+        Args:
+            species: a dictionary in which the calculated concentrations of the species are stored.
+            model: a class created by "biostoch.model.Model".
+            step: integer that represents the current iteration number or time step in the simulation process.
+
+        Returns:
+            rates: a dictionary containing the calculated rates of each reaction at the current time step.
+
+        """
+
         rates = {}
         for specie in species.keys():
             if specie != "Time":
@@ -413,10 +521,17 @@ class RungeKuttaSimulator(object):
         return rates
 
     def simulate(self):
+
+        """Runs the simulation"""
+
         start_simulation = time.time()
 
-        species, parameters = self.initialize_parameters(model=self.model, start=self.start, stop=self.stop,
-                                                         epochs=self.epochs)
+        species, parameters = self.initialize_parameters(
+            model=self.model,
+            start=self.start,
+            stop=self.stop,
+            epochs=self.epochs
+        )
 
         tau = species["Time"][3] - species["Time"][2]
 
@@ -441,253 +556,30 @@ class RungeKuttaSimulator(object):
 
             for specie, concentration in species.items():
                 if specie != "Time":
-                    species[specie][i] = species[specie][i - 1] + (1 / 6) * (k1[specie] + 2 * k2[specie] + 2 * k3[specie] + k4[specie])
+                    species[specie][i] = species[specie][i - 1] + (1 / 6) * (
+                                k1[specie] + 2 * k2[specie] + 2 * k3[specie] + k4[specie])
 
         self.species = species
         self.parameters = parameters
         stop_simulation = time.time()
         self.time["Simulation Duration"] = stop_simulation - start_simulation
-
-
-
-
-class GillespieSimulator(object):
-    """ Simulation using Stochastic Simulation Algorithm """
-
-    def __init__(
-        self,
-        model=None,
-        start=0,
-        stop=10,
-        max_epochs=100,
-        seed=42,
-        steady_state=None,
-        gamma=1e-30,
-        **kwargs
-    ):
-
-        self.model = model
-        self.start = start
-        self.stop = stop
-        self.max_epochs = max_epochs
-        self.seed = seed
-        self.steady_state = steady_state
-        self.gamma = gamma
-
-        if self.model:
-            model_attributes = vars(self.model)
-            self.__dict__.update(model_attributes)
-        else:
-            raise ValueError("Before simulating a model, please ensure that you have instantiated the biostoch.model.Model() object.")
-
-        self.model_name = "Stochastic Simulation Algorithm"
-        self.species = None
-        self.parameters = None
-        self.time = {}
-
-    def reset(self):
-        self.species = None
-        self.parameters = None
-        self.time = {}
-
-
-    def initialize_parameters(self, model, start, max_epochs):
-
-        species = {}
-        parameters = {}
-
-        species["Time"] = np.zeros(max_epochs)
-        species["Time"][0] = start
-
-        for specie in model.components:
-            species[specie] = np.zeros(max_epochs)
-            species[specie][0] = getattr(model, specie)
-
-        for parameter in self.model.params:
-            parameters[parameter] = getattr(model, parameter)
-
-        return species, parameters
-
-
-    def compute_propensity_sum(self, step, propensities, species, parameters):
-
-        propensity_sum = 0.0
-        propensities_ = {}
-        last_step = {}
-        for specie, concentration in species.items():
-            if specie != "Time":
-                last_step[specie] = concentration[step-1]
-        for parameter, value in parameters.items():
-            last_step[parameter] = value
-
-        for reaction, propensity in propensities.items():
-            propensity_ = eval(propensity, last_step)
-            propensity_sum += propensity_
-            propensities_[reaction] = propensity_
-
-        return propensity_sum, propensities_
-
-
-    def compute_tau(self, propensity_sum, gamma):
-
-        tau = np.random.exponential(scale=1 / (propensity_sum + gamma))
-
-        return tau
-
-
-    def update(self, species, model, reaction, num_reaction, propensities, step, tau):
-
-        species["Time"][step] = species["Time"][step - 1] + tau
-
-        for i in range(num_reaction):
-            reaction_name = model.react_names[i]
-            if i == 0:
-                if reaction <= propensities[reaction_name]:
-                    split_reaction = model.reacts_[reaction_name].split()
-                    index = [index for index, value in enumerate(split_reaction) if value == '->']
-                    if len(index) > 1:
-                        print(f"Each reaction should have exactly one '->', but there are more than one in the {reaction_name}.")
-
-                    components_ = []
-                    for j in range(index[0]):
-                        if split_reaction[j] in model.components:
-                            components_.append(split_reaction[j])
-                            species[split_reaction[j]][step] = species[split_reaction[j]][step - 1] - 1
-                    for k in range(index[0] + 1, len(split_reaction)):
-                        if split_reaction[k] in model.components:
-                            components_.append(split_reaction[k])
-                            species[split_reaction[k]][step] = species[split_reaction[k]][step - 1] + 1
-                    for specie_ in species.keys():
-                        if specie_ not in components_ and specie_ != "Time":
-                            species[specie_][step] = species[specie_][step - 1]
-
-            else:
-
-                reaction_name_ = model.react_names[i - 1]
-                keys_to_sum = model.react_names[:i + 1]
-                sum_propensities_ = sum(propensities[react_name_] for react_name_ in keys_to_sum)
-                if reaction > propensities[reaction_name_] and reaction <= sum_propensities_:
-                    split_reaction = model.reacts_[reaction_name].split()
-                    index = [index for index, value in enumerate(split_reaction) if value == '->']
-                    if len(index) > 1:
-                        print(f"Each reaction should have exactly one '->', but there are more than one in the {reaction_name}.")
-
-                    components_ = []
-                    for j in range(index[0]):
-                        if split_reaction[j] in model.components:
-                            components_.append(split_reaction[j])
-                            species[split_reaction[j]][step] = species[split_reaction[j]][step - 1] - 1
-                    for k in range(index[0] + 1, len(split_reaction)):
-                        if split_reaction[k] in model.components:
-                            components_.append(split_reaction[k])
-                            species[split_reaction[k]][step] = species[split_reaction[k]][step - 1] + 1
-                    for specie_ in species.keys():
-                        if specie_ not in components_ and specie_ != "Time":
-                            species[specie_][step] = species[specie_][step - 1]
-
-        return species
-
-
-    def resize_species(self, species, step):
-
-        if step >= len(species["Time"]):
-
-            new_max_steps = len(species["Time"]) * 2
-
-            for specie, concentration in species.items():
-                pad_width = (0, new_max_steps - len(specie))
-                species[specie] = np.pad(specie, pad_width, mode='constant')
-
-        return species
-
-
-    def final_resize_species(self, species, final_step):
-
-        for specie in species.keys():
-            species[specie] = species[specie][:final_step]
-
-        return species
-
-
-    def simulate(self):
-
-        start_simulation = time.time()
-
-        species, parameters = self.initialize_parameters(
-            model=self.model,
-            start=self.start,
-            max_epochs=self.max_epochs
-        )
-
-        step = 1
-        while species["Time"][step-1] < self.stop:
-
-            propensity_sum, propensities_ = self.compute_propensity_sum(
-                step=step,
-                propensities=self.model.rates_,
-                species=species,
-                parameters=parameters
-            )
-
-            if propensity_sum == 0 and self.steady_state:
-                print(f"Simulation reached steady state (iteration: {step}). No further changes are occurring.")
-                break
-
-            tau = self.compute_tau(
-                propensity_sum=propensity_sum,
-                gamma=self.gamma
-            )
-
-            random_number = np.random.uniform(low=0, high=1)
-            num_reactions = len(self.model.reacts_)
-            reaction = propensity_sum * random_number
-
-            species = self.update(
-                species=species,
-                model=self.model,
-                reaction=reaction,
-                num_reaction=num_reactions,
-                propensities=propensities_,
-                step=step,
-                tau=tau
-            )
-
-            step += 1
-
-            species = self.resize_species(
-                species=species,
-                step=step
-            )
-
-        species = self.final_resize_species(
-            species=species,
-            final_step=step
-        )
-
-        self.species = species
-        self.parameters = parameters
-        stop_simulation = time.time()
-        self.time["Simulation Duration"] = stop_simulation - start_simulation
-
-
-
 
 
 class TauLeaping(object):
-
     """ Simulation using Tau-Leaping method """
 
     def __init__(
-        self,
-        model=None,
-        start=0.0,
-        stop=10.0,
-        max_epochs=100,
-        seed=42,
-        steady_state=None,
-        epsilon=0.03,
-        call_tau=None,
-        **kwargs
+            self,
+            model=None,
+            start=0.0,
+            stop=10.0,
+            max_epochs=100,
+            seed=42,
+            steady_state=False,
+            epsilon=0.03,
+            call_tau=False,
+            model_name="Tau-Leaping Algorithm",
+            **kwargs
     ):
 
         self.model = model
@@ -697,50 +589,103 @@ class TauLeaping(object):
         self.seed = seed
         self.steady_state = steady_state
         self.epsilon = epsilon
-        self.tau = (self.stop-self.start) / self.max_epochs
+        self.tau = (self.stop - self.start) / self.max_epochs
         self.call_tau = call_tau
+        self.model_name = model_name
 
         if self.model:
             model_attributes = vars(self.model)
             self.__dict__.update(model_attributes)
         else:
-            raise ValueError("Before simulating a model, please ensure that you have instantiated the biostoch.model.Model() object.")
+            raise ValueError(
+                "Before simulating a model, please ensure that you have instantiated the biostoch.model.Model() object.")
 
-        self.model_name = "Tau-Leaping Algorithm"
-        self.species = None
-        self.parameters = None
+        self.species = {}
+        self.parameters = {}
         self.time = {}
+
+        """
+        Args:
+            model: a class created by "biostoch.model.Model",
+                   contains all necessary information used in simulation with SSA.
+            start: an integer or a float that defines the start time of the simulation.
+            stop: an integer or a float that defines the stop time of the simulation.
+            max_epochs: an integer defines the maximum number of iterations.
+            seed: an integer parameter used to initialize the random number generator.
+            steady_state: Boolean value (True or False); if true, 
+                          the simulation is stopped as soon as the model has reached the steady state.
+            epsilon: a float value that is less than one and is used as a fixed tolerance for the calculation of tau.
+            tau: a float or an integer that represents the time step size.
+            cal_tau: Boolean value (True or False); if true, tau is calculated in each step.
+            model_name: the name of the simulation method "Tau-Leaping Algorithm".
+            **kwargs: a special parameter that allows passing additional keyword arguments to the function.
+
+            species: an empty dictionary in which the calculated concentrations of the species are stored.
+            parameters: an empty dictionary in which the rate constants of the model are stored.
+            time: an empty dictionary in which the simulation duration is stored. 
+        """
 
     def reset(self):
-        self.species = None
-        self.parameters = None
+
+        """ Resets the model species and parameters dictionaries"""
+
+        self.species = {}
+        self.parameters = {}
         self.time = {}
 
+    def initialize_parameters(self, model, start):
 
-    def initialize_parameters(self, model, start, max_epochs):
+        """
+        Initializes the model species dictionary
+
+        Args:
+            model: a class created by "biostoch.model.Model"
+                   contains all necessary information used in simulation with Tau Leaping Algorithm.
+            start: an integer or a float that defines the start time of the simulation.
+        Returns:
+            species: a dictionary contains initialized concentration of each
+                     species and also initialized simulation time in the system.
+                     each dictionary's key is the name of one species
+                     and each value the corresponding initialized concentration.
+            parameters: a dictionary contains the rate constant of each reaction each key
+                        correspond to the name of the rate constant and each value is its value.
+        """
 
         species = {}
         parameters = {}
 
-        species["Time"] = np.zeros(max_epochs)
-        species["Time"][0] = start
+        species["Time"] = [start]
+
         for specie in model.components:
-            species[specie] = np.zeros(max_epochs)
-            species[specie][0] = getattr(model, specie)
+            species[specie] = [getattr(model, specie)]
+
         for parameter in self.model.params:
             parameters[parameter] = getattr(model, parameter)
 
         return species, parameters
 
+    def compute_propensity_sum(self, propensities, species, parameters):
 
-    def compute_propensity_sum(self, species, parameters, propensities, step):
+        """
+        Computes sum of the propensities
+            Args:
+                propensities: a dictionary contains propensity functions of the reactions.
+                species: a dictionary in which the calculated concentrations of the species are stored.
+                parameters: a dictionary in which the rate constants of the model are stored.
+            Returns:
+                propensity_sum: a float value, sum of the propensities.
+                propensities_: a dictionary contains the propensity values of the reactions.
+
+        """
 
         propensity_sum = 0.0
         propensities_ = {}
         last_step = {}
+
         for specie, concentration in species.items():
             if specie != "Time":
-                last_step[specie] = concentration[step-1]
+                last_step[specie] = concentration[-1]
+
         for parameter, value in parameters.items():
             last_step[parameter] = value
 
@@ -751,10 +696,20 @@ class TauLeaping(object):
 
         return propensity_sum, propensities_
 
+    def compute_tau(self, species, model, epsilon):
 
-    def compute_tau(self, species, model, step, epsilon):
+        """
 
-        X = np.array([species[con][step - 1] for con in species.keys() if con != "Time"])
+        Args:
+            species: a dictionary in which the calculated concentrations of the species are stored.
+            model: a class created by "biostoch.model.Model"
+            epsilon: a float value that is less than one and is used as a fixed tolerance for the calculation of tau.
+
+        Returns:
+            tau: a float or an integer, calculated tau.
+        """
+
+        X = np.array([species[con][-1] for con in species.keys() if con != "Time"])
         v = []
 
         for key, val in model.coeffs_.items():
@@ -767,7 +722,7 @@ class TauLeaping(object):
         R = []
 
         comp = model.params
-        X1 = {key: val[step - 1] for key, val in species.items() if key != "Time"}
+        X1 = {key: val[-1] for key, val in species.items() if key != "Time"}
         comp.update(X1)
 
         s = 0
@@ -796,14 +751,27 @@ class TauLeaping(object):
 
         return min(tau_values)
 
+    def compute_lambdas(self, species, parameters, propensities, tau):
 
-    def compute_lambdas(self, species, parameters, propensities, tau, step):
+        """
+
+        Args:
+            species: a dictionary in which the calculated concentrations of the species are stored.
+            parameters: a dictionary in which the rate constants of the model are stored.
+            propensities: a dictionary contains the propensity values of the reactions.
+            tau: a float or an integer that represents the time step size.
+
+        Returns:
+            lambda: calculated poisson distribution parameter (lambda),
+                    (the mean number of events within a given interval of time or space)
+
+        """
 
         last_step = {}
 
         for specie, concentration in species.items():
             if specie != "Time":
-                last_step[specie] = concentration[step - 1]
+                last_step[specie] = concentration[-1]
 
         for parameter, value in parameters.items():
             last_step[parameter] = value
@@ -820,18 +788,37 @@ class TauLeaping(object):
 
         return lambdas
 
-
     def num_reaction(self, lambdas):
+
+        """
+
+        Args: poisson distribution parameter (lambda)
+            lambdas:
+
+        Returns:
+            num_reaction_: a dictionary contains number of times ach reaction occurred in the time interval (tau).
+
+        """
+
         num_reaction_ = {}
         for reaction, lambda_ in lambdas.items():
             num_reaction_[reaction] = np.random.poisson(lambda_)
 
         return num_reaction_
 
+    def update(self, species, model, num_reaction, tau):
 
-    def update(self, species, model, num_reaction, step, tau):
+        """
+        Args:
+            species: a dictionary in which the calculated concentrations of the species are stored.
+            model: a class created by "biostoch.model.Model".
+            num_reaction: an integer value that indicates the number of reaction in the system.
+            tau: a float or an integer, calculated tau.
+        Returns:
+            species: a dictionary in which the calculated concentrations of the species are stored.
+        """
 
-        species["Time"][step] = species["Time"][step - 1] + tau
+        species["Time"].append(species["Time"][-1] + tau)
 
         for reaction, formula in model.reacts_.items():
             split_formula = formula.split()
@@ -842,48 +829,34 @@ class TauLeaping(object):
 
         component_reaction = {}
         for component in model.components:
-            num_reaction_ = sum([num_reaction[reaction_] * model.coeffs_[reaction_][component] for reaction_ in model.react_names if component in model.react_sps[reaction_]])
+            num_reaction_ = sum(
+                [num_reaction[reaction_] * model.coeffs_[reaction_][component] for reaction_ in model.react_names if
+                 component in model.react_sps[reaction_]])
             component_reaction[component] = num_reaction_
 
         for component, value in component_reaction.items():
-            species[component][step] = species[component][step - 1] + value
+            species[component].append(species[component][-1] + value)
 
         return species
-
-
-    def resize_species(self, species, step):
-
-        if step >= len(species["Time"]):
-
-            new_max_steps = len(species["Time"]) * 2
-
-            for specie, concentration in species.items():
-                pad_width = (0, new_max_steps - len(concentration))
-                species[specie] = np.pad(concentration, pad_width, mode='constant')
-
-        return species
-
-
-    def final_resize_species(self, species, final_step):
-        for specie in species.keys():
-            species[specie] = species[specie][:final_step]
-        return species
-
 
     def simulate(self):
 
+        """Runs the simulation"""
+
         start_simulation = time.time()
 
-        species, parameters = self.initialize_parameters(model=self.model, start=self.start, max_epochs=self.max_epochs)
+        species, parameters = self.initialize_parameters(
+            model=self.model,
+            start=self.start
+        )
 
-        step = 1
-        while step < self.max_epochs:
+        step = 2
+        while species["Time"][-1] <= self.stop:
 
             propensity_sum, propensities_ = self.compute_propensity_sum(
                 species=species,
                 parameters=parameters,
-                propensities=self.model.rates_,
-                step=step
+                propensities=self.model.rates_
             )
 
             if propensity_sum == 0 and self.steady_state:
@@ -891,7 +864,11 @@ class TauLeaping(object):
                 break
 
             if self.call_tau:
-                tau = self.compute_tau(species=species, model=self.model, step=step, epsilon=self.epsilon)
+                tau = self.compute_tau(
+                    species=species,
+                    model=self.model,
+                    epsilon=self.epsilon
+                )
             else:
                 tau = self.tau
 
@@ -899,8 +876,7 @@ class TauLeaping(object):
                 species=species,
                 parameters=self.model.params,
                 propensities=self.model.rates_,
-                tau=tau,
-                step=step
+                tau=tau
             )
 
             num_reaction = self.num_reaction(
@@ -911,21 +887,13 @@ class TauLeaping(object):
                 species=species,
                 model=self.model,
                 num_reaction=num_reaction,
-                step=step,
                 tau=tau
             )
 
             step += 1
-
-            species = self.resize_species(
-                species=species,
-                step=step
-            )
-
-        species = self.final_resize_species(
-            species=species,
-            final_step=step
-        )
+            if step == self.max_epochs:
+                print(f"Simulation reached the maximum iteration (max_epochs={self.max_epochs})!")
+                break
 
         self.species = species
         self.parameters = parameters
@@ -934,19 +902,20 @@ class TauLeaping(object):
 
 
 
-class ChemicalLangevin(object):
 
+class ChemicalLangevin(object):
     """ Simulation using Chemical Langevin Equation """
 
     def __init__(
-        self,
-        model=None,
-        start=0.0,
-        stop=10.0,
-        max_epochs=100,
-        seed=42,
-        steady_state=None,
-        **kwargs
+            self,
+            model=None,
+            start=0.0,
+            stop=10.0,
+            max_epochs=100,
+            seed=42,
+            steady_state=False,
+            model_name="Chemical Langevin Equation",
+            **kwargs
     ):
 
         self.model = model
@@ -955,6 +924,7 @@ class ChemicalLangevin(object):
         self.max_epochs = max_epochs
         self.seed = seed
         self.steady_state = steady_state
+        self.model_name = model_name
 
         self.tau = (self.stop - self.start) / self.max_epochs
 
@@ -962,41 +932,85 @@ class ChemicalLangevin(object):
             model_attributes = vars(self.model)
             self.__dict__.update(model_attributes)
         else:
-            raise ValueError("Before simulating a model, please ensure that you have instantiated the biostoch.model.Model() object.")
+            raise ValueError(
+                "Before simulating a model, please ensure that you have instantiated the biostoch.model.Model() object.")
 
-        self.model_name = "Chemical Langevin Equation"
-        self.species = None
-        self.parameters = None
+        self.species = {}
+        self.parameters = {}
         self.time = {}
 
+        """
+        Args:
+            model: a class created by "biostoch.model.Model",
+                   contains all necessary information used in simulation with SSA.
+            start: an integer or a float that defines the start time of the simulation.
+            stop: an integer or a float that defines the stop time of the simulation.
+            max_epochs: an integer defines the maximum number of iterations.
+            seed: an integer parameter used to initialize the random number generator.
+            steady_state: Boolean value (True or False); if true, 
+                          the simulation is stopped as soon as the model has reached the steady state.
+            model_name: the name of the simulation method "Tau-Leaping Algorithm".
+            **kwargs: a special parameter that allows passing additional keyword arguments to the function.
+            tau: a float or an integer that represents the time step size.
+
+            species: an empty dictionary in which the calculated concentrations of the species are stored.
+            parameters: an empty dictionary in which the rate constants of the model are stored.
+            time: an empty dictionary in which the simulation duration is stored. 
+        """
 
     def reset(self):
-        self.species = None
-        self.parameters = None
+
+        """ Resets the model species and parameters dictionaries"""
+
+        self.species = {}
+        self.parameters = {}
         self.time = {}
 
+    def initialize_parameters(self, model, start):
 
-    def initialize_parameters(self, model, start, max_epochs):
+        """
+        Initializes the model species dictionary
+
+        Args:
+            model: a class created by "biostoch.model.Model"
+                   contains all necessary information used in simulation with SSA.
+            start: an integer or a float that defines the start time of the simulation.
+        Returns:
+            species: a dictionary contains initialized concentration of each
+                     species and also initialized simulation time in the system.
+                     each dictionary's key is the name of one species
+                     and each value the corresponding initialized concentration.
+            parameters: a dictionary contains the rate constant of each reaction each key
+                        correspond to the name of the rate constant and each value is its value.
+        """
 
         species = {}
         parameters = {}
 
-        species["Time"] = np.zeros(max_epochs)
-        species["Time"][0] = start
+        species["Time"] = [start]
+
         for specie in model.components:
-            species[specie] = np.zeros(max_epochs)
-            if getattr(model, specie) != 0:
-                species[specie][0] = getattr(model, specie)
-            else:
-                species[specie][0] = getattr(model, specie)
+            species[specie] = [getattr(model, specie)]
 
         for parameter in self.model.params:
             parameters[parameter] = getattr(model, parameter)
 
         return species, parameters
 
+    def compute_change(self, model, species, tau):
 
-    def compute_change(self, model, species, tau, step):
+        """
+
+        Args:
+            model: a class created by "biostoch.model.Model"
+            species: a dictionary in which the calculated concentrations of the species are stored.
+            tau: a float or an integer, calculated tau.
+
+        Returns:
+            changes: a dictionary stores the computed changes in the concentrations
+                     of species due to each reaction during the time step (tau)(without noise).
+            terms: a dictionary is used to collect the terms needed for evaluating the rates of reactions.
+        """
 
         changes = {}
         terms = {}
@@ -1005,26 +1019,48 @@ class ChemicalLangevin(object):
             terms[parameters] = value
 
         for specie, concentration in species.items():
-            terms[specie] = concentration[step - 1]
+            terms[specie] = concentration[-1]
 
         for reaction, rate in model.rates_.items():
             changes[reaction] = eval(rate, terms) * tau
 
         return changes, terms
 
-
     def compute_noise(self, model, terms, tau):
+
+        """
+
+        Args:
+            model: a class created by "biostoch.model.Model"
+            terms: a dictionary is used to collect the terms needed for evaluating the rates of reactions.
+            tau: a float or an integer, calculated tau.
+
+        Returns:
+            noises: a dictionary contains computed noise terms for each reaction in the system.
+
+        """
 
         noises = {}
 
         for reaction, rate in model.rates_.items():
             random_number = np.random.normal()
-            noises[reaction] = (tau**.5) * ((eval(rate, terms))**.5) * random_number
+            noises[reaction] = (tau ** .5) * ((eval(rate, terms)) ** .5) * random_number
 
         return noises
 
-
     def compute_changes(self, noises, changes):
+
+        """
+
+        Args:
+            noises: a dictionary contains computed noise terms for each reaction in the system.
+            changes: a dictionary stores the computed changes in the concentrations
+                     of species due to each reaction during the time step (tau) (without noise).
+
+        Returns:
+            changes: a dictionary stores the computed changes in the concentrations
+                     of species due to each reaction during the time step (tau) (witt noise).
+        """
 
         changes_ = {}
 
@@ -1033,10 +1069,20 @@ class ChemicalLangevin(object):
 
         return changes_
 
+    def update(self, species, model, changes_, tau):
 
-    def update(self, species, model, changes_, step, tau):
+        """
+        Args:
+            species: a dictionary in which the calculated concentrations of the species are stored.
+            model: a class created by "biostoch.model.Model".
+            changes_: a dictionary stores the computed changes in the concentrations
+                     of species due to each reaction during the time step (tau).
+            tau: a float or an integer, calculated tau.
+        Returns:
+            species: a dictionary in which the calculated concentrations of the species are stored.
+        """
 
-        species["Time"][step] = species["Time"][step - 1] + tau
+        species["Time"].append(species["Time"][-1] + tau)
 
         for reaction, formula in model.reacts_.items():
             split_formula = formula.split()
@@ -1048,53 +1094,34 @@ class ChemicalLangevin(object):
         component_reaction = {}
 
         for component in model.components:
-
-            num_reaction_ = sum([changes_[reaction_] * model.coeffs_[reaction_][component] for reaction_ in model.react_names if component in model.react_sps[reaction_]])
+            num_reaction_ = sum(
+                [changes_[reaction_] * model.coeffs_[reaction_][component] for reaction_ in model.react_names if
+                 component in model.react_sps[reaction_]])
             component_reaction[component] = num_reaction_
 
         for component, value in component_reaction.items():
-            species[component][step] = species[component][step - 1] + value
+            species[component].append(species[component][-1] + value)
 
         return species
-
-
-    def resize_species(self, species, step):
-
-        if step >= len(species["Time"]):
-
-            new_max_steps = len(species["Time"]) * 2
-
-            for specie, concentration in species.items():
-                pad_width = (0, new_max_steps - len(concentration))
-                species[specie] = np.pad(concentration, pad_width, mode='constant')
-
-        return species
-
-
-    def final_resize_species(self, species, final_step):
-        for specie in species.keys():
-            species[specie] = species[specie][:final_step]
-        return species
-
 
     def simulate(self):
+
+        """Runs the simulation"""
 
         start_simulation = time.time()
 
         species, parameters = self.initialize_parameters(
             model=self.model,
-            start=self.start,
-            max_epochs=self.max_epochs
+            start=self.start
         )
 
-        step = 1
-        while species["Time"][step] < self.stop and step < self.max_epochs:
+        step = 2
+        while species["Time"][-1] <= self.stop:
 
             changes, terms = self.compute_change(
                 model=self.model,
                 species=species,
-                tau=self.tau,
-                step=step
+                tau=self.tau
             )
 
             noises = self.compute_noise(
@@ -1112,21 +1139,13 @@ class ChemicalLangevin(object):
                 species=species,
                 model=self.model,
                 changes_=changes_,
-                step=step,
                 tau=self.tau
             )
 
             step += 1
-
-            species = self.resize_species(
-                species=species,
-                step=step
-            )
-
-        species = self.final_resize_species(
-            species=species,
-            final_step=step
-        )
+            if step == self.max_epochs:
+                print(f"Simulation reached the maximum iteration (max_epochs={self.max_epochs})!")
+                break
 
         self.species = species
         self.parameters = parameters
@@ -1134,6 +1153,269 @@ class ChemicalLangevin(object):
         self.time["Simulation Duration"] = stop_simulation - start_simulation
 
 
+class GillespieSimulator(object):
+    """ Simulation using Gillespie's Stochastic Simulation Algorithm (SSA) """
+
+    def __init__(
+            self,
+            model=None,
+            start=0,
+            stop=10,
+            max_epochs=100,
+            seed=42,
+            steady_state=False,
+            gamma=1e-30,
+            model_name="Stochastic Simulation Algorithm",
+            **kwargs
+    ):
+
+        self.model = model
+        self.start = start
+        self.stop = stop
+        self.max_epochs = max_epochs
+        self.seed = seed
+        self.steady_state = steady_state
+        self.gamma = gamma
+        self.model_name = model_name
+
+        if self.model:
+            model_attributes = vars(self.model)
+            self.__dict__.update(model_attributes)
+        else:
+            raise ValueError(
+                "Before simulating a model, please ensure that you have instantiated the biostoch.model.Model() object.")
+
+        self.species = {}
+        self.parameters = {}
+        self.time = {}
+
+        """
+        Args:
+            model: a class created by "biostoch.model.Model",
+                   contains all necessary information used in simulation with SSA.
+            start: an integer or a float that defines the start time of the simulation.
+            stop: an integer or a float that defines the stop time of the simulation.
+            max_epochs: an integer defines the maximum number of iterations.
+            seed: an integer parameter used to initialize the random number generator.
+            steady_state: Boolean value (True or False); if true, 
+                          the simulation is stopped as soon as the model has reached the steady state.
+            gamma: a small float value used to prevent zero division when calculating tau.
+            model_name: the name of the simulation method "Stochastic Simulation Algorithm".
+            **kwargs: a special parameter that allows passing additional keyword arguments to the function.
+
+            species: an empty dictionary in which the calculated concentrations of the species are stored.
+            parameters: an empty dictionary in which the rate constants of the model are stored.
+            time: an empty dictionary in which the simulation duration is stored. 
+        """
+
+    def reset(self):
+
+        """ Resets the model species and parameters dictionaries"""
+
+        self.species = {}
+        self.parameters = {}
+        self.time = {}
+
+    def initialize_parameters(self, model, start):
+
+        """
+        Initializes the model species dictionary
+
+        Args:
+           model: a class created by "biostoch.model.Model"
+                  contains all necessary information used in simulation with SSA.
+           start: an integer or a float that defines the start time of the simulation.
+        Returns:
+           species: a dictionary contains initialized concentration of each
+                    species and also initialized simulation time in the system.
+                    each dictionary's key is the name of one species
+                    and each value the corresponding initialized concentration.
+           parameters: a dictionary contains the rate constant of each reaction each key
+                       correspond to the name of the rate constant and each value is its value.
+        """
+
+        species = {}
+        parameters = {}
+
+        species["Time"] = [start]
+
+        for specie in model.components:
+            species[specie] = [getattr(model, specie)]
+
+        for parameter in self.model.params:
+            parameters[parameter] = getattr(model, parameter)
+
+        return species, parameters
+
+    def compute_propensity_sum(self, propensities, species, parameters):
+
+        """
+        Computes sum of the propensities
+        Args:
+            propensities: a dictionary contains propensity functions of the reactions.
+            species: a dictionary in which the calculated concentrations of the species are stored.
+            parameters: a dictionary in which the rate constants of the model are stored.
+        Returns:
+            propensity_sum: a float value, sum of the propensities.
+            propensities_: a dictionary contains the propensity values of the reactions.
+
+        """
+
+        propensity_sum = 0.0
+        propensities_ = {}
+        last_step = {}
+        for specie, concentration in species.items():
+            if specie != "Time":
+                last_step[specie] = concentration[-1]
+        for parameter, value in parameters.items():
+            last_step[parameter] = value
+
+        for reaction, propensity in propensities.items():
+            propensity_ = eval(propensity, last_step)
+            propensity_sum += propensity_
+            propensities_[reaction] = propensity_
+
+        return propensity_sum, propensities_
+
+    def compute_tau(self, propensity_sum, gamma):
+
+        """
+        Computes  the time until the next reaction event occurs (tau)
+        based on the sum of reaction propensities in the system.
+
+        Args:
+            propensity_sum: a float value, sum of the propensities.
+            gamma: a small float value used to prevent zero division when calculating tau.
+
+        Returns:
+            tau: a float or an integer, calculated tau.
+
+        """
+
+        tau = np.random.exponential(scale=1 / (propensity_sum + gamma))
+
+        return tau
+
+    def update(self, species, model, reaction, num_reaction, propensities, tau):
+
+        """
+
+        Args:
+            species: a dictionary in which the calculated concentrations of the species are stored.
+            model: a class created by "biostoch.model.Model".
+            reaction: a float value that indicates which reaction is taking place.
+            num_reaction: an integer value that indicates the number of reaction in the system.
+            propensities: a dictionary contains the propensity values of the reactions.
+            tau: a float or an integer, calculated tau.
+
+        Returns:
+            species: a dictionary in which the calculated concentrations of the species are stored.
+        """
+
+        species["Time"].append(species["Time"][-1] + tau)
+
+        for i in range(num_reaction):
+            reaction_name = model.react_names[i]
+            if i == 0:
+                if reaction <= propensities[reaction_name]:
+                    split_reaction = model.reacts_[reaction_name].split()
+                    index = [index for index, value in enumerate(split_reaction) if value == '->']
+                    if len(index) > 1:
+                        print(
+                            f"Each reaction should have exactly one '->', but there are more than one in the {reaction_name}.")
+
+                    components_ = []
+                    for j in range(index[0]):
+                        if split_reaction[j] in model.components:
+                            components_.append(split_reaction[j])
+                            species[split_reaction[j]].append(species[split_reaction[j]][-1] - 1)
+                    for k in range(index[0] + 1, len(split_reaction)):
+                        if split_reaction[k] in model.components:
+                            components_.append(split_reaction[k])
+                            species[split_reaction[k]].append(species[split_reaction[k]][-1] + 1)
+                    for specie_ in species.keys():
+                        if specie_ not in components_ and specie_ != "Time":
+                            species[specie_].append(species[specie_][-1])
+
+            else:
+
+                reaction_name_ = model.react_names[i - 1]
+                keys_to_sum = model.react_names[:i + 1]
+                sum_propensities_ = sum(propensities[react_name_] for react_name_ in keys_to_sum)
+
+                if reaction > propensities[reaction_name_] and reaction <= sum_propensities_:
+
+                    split_reaction = model.reacts_[reaction_name].split()
+                    index = [index for index, value in enumerate(split_reaction) if value == '->']
+                    if len(index) > 1:
+                        print(
+                            f"Each reaction should have exactly one '->', but there are more than one in the {reaction_name}.")
+
+                    components_ = []
+                    for j in range(index[0]):
+                        if split_reaction[j] in model.components:
+                            components_.append(split_reaction[j])
+                            species[split_reaction[j]].append(species[split_reaction[j]][-1] - 1)
+                    for k in range(index[0] + 1, len(split_reaction)):
+                        if split_reaction[k] in model.components:
+                            components_.append(split_reaction[k])
+                            species[split_reaction[k]].append(species[split_reaction[k]][-1] + 1)
+                    for specie_ in species.keys():
+                        if specie_ not in components_ and specie_ != "Time":
+                            species[specie_].append(species[specie_][-1])
+
+        return species
+
+    def simulate(self):
+
+        """Runs the simulation"""
+
+        start_simulation = time.time()
+
+        species, parameters = self.initialize_parameters(
+            model=self.model,
+            start=self.start
+        )
+
+        step = 2
+        while species["Time"][-1] <= self.stop:
+
+            propensity_sum, propensities_ = self.compute_propensity_sum(
+                propensities=self.model.rates_,
+                species=species,
+                parameters=parameters
+            )
+
+            if propensity_sum == 0 and self.steady_state:
+                print(f"Simulation reached steady state (iteration: {step}). No further changes are occurring.")
+                break
+
+            tau = self.compute_tau(
+                propensity_sum=propensity_sum,
+                gamma=self.gamma
+            )
+
+            random_number = np.random.uniform(low=0, high=1)
+            num_reactions = len(self.model.reacts_)
+            reaction = propensity_sum * random_number
+
+            species = self.update(
+                species=species,
+                model=self.model,
+                reaction=reaction,
+                num_reaction=num_reactions,
+                propensities=propensities_,
+                tau=tau
+            )
+            step += 1
+            if step == self.max_epochs:
+                print(f"Simulation reached the maximum iteration (max_epochs={self.max_epochs})!")
+                break
+
+        self.species = species
+        self.parameters = parameters
+        stop_simulation = time.time()
+        self.time["Simulation Duration"] = stop_simulation - start_simulation
 
 
 class Visualization(object):
@@ -1148,8 +1430,6 @@ class Visualization(object):
         self.model_name = model_name
 
     def extract_species(self, model):
-
-        simulation_result = None
 
         if model.species and isinstance(model.species, dict):
             simulation_result = model.species

@@ -2,10 +2,9 @@ import numpy as np
 import time
 
 
-
-
 class GillespieSimulator(object):
-    """ Simulation using Stochastic Simulation Algorithm """
+
+    """ Simulation using Gillespie's Stochastic Simulation Algorithm (SSA) """
 
     def __init__(
         self,
@@ -14,8 +13,9 @@ class GillespieSimulator(object):
         stop=10,
         max_epochs=100,
         seed=42,
-        steady_state=None,
+        steady_state=False,
         gamma=1e-30,
+        model_name="Stochastic Simulation Algorithm",
         **kwargs
     ):
 
@@ -26,6 +26,7 @@ class GillespieSimulator(object):
         self.seed = seed
         self.steady_state = steady_state
         self.gamma = gamma
+        self.model_name = model_name
 
         if self.model:
             model_attributes = vars(self.model)
@@ -33,43 +34,88 @@ class GillespieSimulator(object):
         else:
             raise ValueError("Before simulating a model, please ensure that you have instantiated the biostoch.model.Model() object.")
 
-        self.model_name = "Stochastic Simulation Algorithm"
-        self.species = None
-        self.parameters = None
+        self.species = {}
+        self.parameters = {}
         self.time = {}
+
+        """
+        Args:
+            model: a class created by "biostoch.model.Model",
+                   contains all necessary information used in simulation with SSA.
+            start: an integer or a float that defines the start time of the simulation.
+            stop: an integer or a float that defines the stop time of the simulation.
+            max_epochs: an integer defines the maximum number of iterations.
+            seed: an integer parameter used to initialize the random number generator.
+            steady_state: Boolean value (True or False); if true, 
+                          the simulation is stopped as soon as the model has reached the steady state.
+            gamma: a small float value used to prevent zero division when calculating tau.
+            model_name: the name of the simulation method "Stochastic Simulation Algorithm".
+            **kwargs: a special parameter that allows passing additional keyword arguments to the function.
+            
+            species: an empty dictionary in which the calculated concentrations of the species are stored.
+            parameters: an empty dictionary in which the rate constants of the model are stored.
+            time: an empty dictionary in which the simulation duration is stored. 
+        """
 
     def reset(self):
-        self.species = None
-        self.parameters = None
+
+        """ Resets the model species and parameters dictionaries"""
+
+        self.species = {}
+        self.parameters = {}
         self.time = {}
 
+    def initialize_parameters(self, model, start):
 
-    def initialize_parameters(self, model, start, max_epochs):
+        """
+        Initializes the model species dictionary
+
+        Args:
+           model: a class created by "biostoch.model.Model"
+                  contains all necessary information used in simulation with SSA.
+           start: an integer or a float that defines the start time of the simulation.
+        Returns:
+           species: a dictionary contains initialized concentration of each
+                    species and also initialized simulation time in the system.
+                    each dictionary's key is the name of one species
+                    and each value the corresponding initialized concentration.
+           parameters: a dictionary contains the rate constant of each reaction each key
+                       correspond to the name of the rate constant and each value is its value.
+        """
 
         species = {}
         parameters = {}
 
-        species["Time"] = np.zeros(max_epochs)
-        species["Time"][0] = start
+        species["Time"] = [start]
 
         for specie in model.components:
-            species[specie] = np.zeros(max_epochs)
-            species[specie][0] = getattr(model, specie)
+            species[specie] = [getattr(model, specie)]
 
         for parameter in self.model.params:
             parameters[parameter] = getattr(model, parameter)
 
         return species, parameters
 
+    def compute_propensity_sum(self, propensities, species, parameters):
 
-    def compute_propensity_sum(self, step, propensities, species, parameters):
+        """
+        Computes sum of the propensities
+        Args:
+            propensities: a dictionary contains propensity functions of the reactions.
+            species: a dictionary in which the calculated concentrations of the species are stored.
+            parameters: a dictionary in which the rate constants of the model are stored.
+        Returns:
+            propensity_sum: a float value, sum of the propensities.
+            propensities_: a dictionary contains the propensity values of the reactions.
+
+        """
 
         propensity_sum = 0.0
         propensities_ = {}
         last_step = {}
         for specie, concentration in species.items():
             if specie != "Time":
-                last_step[specie] = concentration[step-1]
+                last_step[specie] = concentration[-1]
         for parameter, value in parameters.items():
             last_step[parameter] = value
 
@@ -83,14 +129,40 @@ class GillespieSimulator(object):
 
     def compute_tau(self, propensity_sum, gamma):
 
+        """
+        Computes  the time until the next reaction event occurs (tau)
+        based on the sum of reaction propensities in the system.
+
+        Args:
+            propensity_sum: a float value, sum of the propensities.
+            gamma: a small float value used to prevent zero division when calculating tau.
+
+        Returns:
+            tau: a float or an integer, calculated tau.
+
+        """
+
         tau = np.random.exponential(scale=1 / (propensity_sum + gamma))
 
         return tau
 
+    def update(self, species, model, reaction, num_reaction, propensities, tau):
 
-    def update(self, species, model, reaction, num_reaction, propensities, step, tau):
+        """
 
-        species["Time"][step] = species["Time"][step - 1] + tau
+        Args:
+            species: a dictionary in which the calculated concentrations of the species are stored.
+            model: a class created by "biostoch.model.Model".
+            reaction: a float value that indicates which reaction is taking place.
+            num_reaction: an integer value that indicates the number of reaction in the system.
+            propensities: a dictionary contains the propensity values of the reactions.
+            tau: a float or an integer, calculated tau.
+
+        Returns:
+            species: a dictionary in which the calculated concentrations of the species are stored.
+        """
+
+        species["Time"].append(species["Time"][-1] + tau)
 
         for i in range(num_reaction):
             reaction_name = model.react_names[i]
@@ -105,21 +177,23 @@ class GillespieSimulator(object):
                     for j in range(index[0]):
                         if split_reaction[j] in model.components:
                             components_.append(split_reaction[j])
-                            species[split_reaction[j]][step] = species[split_reaction[j]][step - 1] - 1
+                            species[split_reaction[j]].append(species[split_reaction[j]][-1] - 1)
                     for k in range(index[0] + 1, len(split_reaction)):
                         if split_reaction[k] in model.components:
                             components_.append(split_reaction[k])
-                            species[split_reaction[k]][step] = species[split_reaction[k]][step - 1] + 1
+                            species[split_reaction[k]].append(species[split_reaction[k]][-1] + 1)
                     for specie_ in species.keys():
                         if specie_ not in components_ and specie_ != "Time":
-                            species[specie_][step] = species[specie_][step - 1]
+                            species[specie_].append(species[specie_][-1])
 
             else:
 
-                reaction_name_ = model.react_names[i - 1]
-                keys_to_sum = model.react_names[:i + 1]
+                reaction_name_ = model.react_names[i-1]
+                keys_to_sum = model.react_names[:i+1]
                 sum_propensities_ = sum(propensities[react_name_] for react_name_ in keys_to_sum)
+
                 if reaction > propensities[reaction_name_] and reaction <= sum_propensities_:
+
                     split_reaction = model.reacts_[reaction_name].split()
                     index = [index for index, value in enumerate(split_reaction) if value == '->']
                     if len(index) > 1:
@@ -129,54 +203,32 @@ class GillespieSimulator(object):
                     for j in range(index[0]):
                         if split_reaction[j] in model.components:
                             components_.append(split_reaction[j])
-                            species[split_reaction[j]][step] = species[split_reaction[j]][step - 1] - 1
+                            species[split_reaction[j]].append(species[split_reaction[j]][-1] - 1)
                     for k in range(index[0] + 1, len(split_reaction)):
                         if split_reaction[k] in model.components:
                             components_.append(split_reaction[k])
-                            species[split_reaction[k]][step] = species[split_reaction[k]][step - 1] + 1
+                            species[split_reaction[k]].append(species[split_reaction[k]][-1] + 1)
                     for specie_ in species.keys():
                         if specie_ not in components_ and specie_ != "Time":
-                            species[specie_][step] = species[specie_][step - 1]
+                            species[specie_].append(species[specie_][-1])
 
         return species
-
-
-    def resize_species(self, species, step):
-
-        if step >= len(species["Time"]):
-
-            new_max_steps = len(species["Time"]) * 2
-
-            for specie, concentration in species.items():
-                pad_width = (0, new_max_steps - len(specie))
-                species[specie] = np.pad(specie, pad_width, mode='constant')
-
-        return species
-
-
-    def final_resize_species(self, species, final_step):
-
-        for specie in species.keys():
-            species[specie] = species[specie][:final_step]
-
-        return species
-
 
     def simulate(self):
+
+        """Runs the simulation"""
 
         start_simulation = time.time()
 
         species, parameters = self.initialize_parameters(
             model=self.model,
-            start=self.start,
-            max_epochs=self.max_epochs
+            start=self.start
         )
 
-        step = 1
-        while species["Time"][step-1] < self.stop:
+        step = 2
+        while species["Time"][-1] <= self.stop:
 
             propensity_sum, propensities_ = self.compute_propensity_sum(
-                step=step,
                 propensities=self.model.rates_,
                 species=species,
                 parameters=parameters
@@ -201,28 +253,17 @@ class GillespieSimulator(object):
                 reaction=reaction,
                 num_reaction=num_reactions,
                 propensities=propensities_,
-                step=step,
                 tau=tau
             )
-
             step += 1
-
-            species = self.resize_species(
-                species=species,
-                step=step
-            )
-
-        species = self.final_resize_species(
-            species=species,
-            final_step=step
-        )
+            if step == self.max_epochs:
+                print(f"Simulation reached the maximum iteration (max_epochs={self.max_epochs})!")
+                break
 
         self.species = species
         self.parameters = parameters
         stop_simulation = time.time()
         self.time["Simulation Duration"] = stop_simulation - start_simulation
-
-
 
 
 
