@@ -13,9 +13,10 @@ class TauLeaping(object):
         stop=10.0,
         max_epochs=100,
         seed=42,
-        steady_state=None,
+        steady_state=False,
         epsilon=0.03,
-        call_tau=None,
+        call_tau=False,
+        model_name="Tau-Leaping Algorithm",
         **kwargs
     ):
 
@@ -28,6 +29,7 @@ class TauLeaping(object):
         self.epsilon = epsilon
         self.tau = (self.stop-self.start) / self.max_epochs
         self.call_tau = call_tau
+        self.model_name = model_name
 
         if self.model:
             model_attributes = vars(self.model)
@@ -35,41 +37,92 @@ class TauLeaping(object):
         else:
             raise ValueError("Before simulating a model, please ensure that you have instantiated the biostoch.model.Model() object.")
 
-        self.model_name = "Tau-Leaping Algorithm"
-        self.species = None
-        self.parameters = None
+        self.species = {}
+        self.parameters = {}
         self.time = {}
+
+        """
+        Args:
+            model: a class created by "biostoch.model.Model",
+                   contains all necessary information used in simulation with SSA.
+            start: an integer or a float that defines the start time of the simulation.
+            stop: an integer or a float that defines the stop time of the simulation.
+            max_epochs: an integer defines the maximum number of iterations.
+            seed: an integer parameter used to initialize the random number generator.
+            steady_state: Boolean value (True or False); if true, 
+                          the simulation is stopped as soon as the model has reached the steady state.
+            epsilon: a float value that is less than one and is used as a fixed tolerance for the calculation of tau.
+            tau: a float or an integer that represents the time step size.
+            cal_tau: Boolean value (True or False); if true, tau is calculated in each step.
+            model_name: the name of the simulation method "Tau-Leaping Algorithm".
+            **kwargs: a special parameter that allows passing additional keyword arguments to the function.
+
+            species: an empty dictionary in which the calculated concentrations of the species are stored.
+            parameters: an empty dictionary in which the rate constants of the model are stored.
+            time: an empty dictionary in which the simulation duration is stored. 
+        """
 
     def reset(self):
-        self.species = None
-        self.parameters = None
+
+        """ Resets the model species and parameters dictionaries"""
+
+        self.species = {}
+        self.parameters = {}
         self.time = {}
 
+    def initialize_parameters(self, model, start):
 
-    def initialize_parameters(self, model, start, max_epochs):
+        """
+        Initializes the model species dictionary
+
+        Args:
+            model: a class created by "biostoch.model.Model"
+                   contains all necessary information used in simulation with Tau Leaping Algorithm.
+            start: an integer or a float that defines the start time of the simulation.
+        Returns:
+            species: a dictionary contains initialized concentration of each
+                     species and also initialized simulation time in the system.
+                     each dictionary's key is the name of one species
+                     and each value the corresponding initialized concentration.
+            parameters: a dictionary contains the rate constant of each reaction each key
+                        correspond to the name of the rate constant and each value is its value.
+        """
 
         species = {}
         parameters = {}
 
-        species["Time"] = np.zeros(max_epochs)
-        species["Time"][0] = start
+        species["Time"] = [start]
+
         for specie in model.components:
-            species[specie] = np.zeros(max_epochs)
-            species[specie][0] = getattr(model, specie)
+            species[specie] = [getattr(model, specie)]
+
         for parameter in self.model.params:
             parameters[parameter] = getattr(model, parameter)
 
         return species, parameters
 
+    def compute_propensity_sum(self, propensities, species, parameters):
 
-    def compute_propensity_sum(self, species, parameters, propensities, step):
+        """
+        Computes sum of the propensities
+            Args:
+                propensities: a dictionary contains propensity functions of the reactions.
+                species: a dictionary in which the calculated concentrations of the species are stored.
+                parameters: a dictionary in which the rate constants of the model are stored.
+            Returns:
+                propensity_sum: a float value, sum of the propensities.
+                propensities_: a dictionary contains the propensity values of the reactions.
+
+        """
 
         propensity_sum = 0.0
         propensities_ = {}
         last_step = {}
+
         for specie, concentration in species.items():
             if specie != "Time":
-                last_step[specie] = concentration[step-1]
+                last_step[specie] = concentration[-1]
+
         for parameter, value in parameters.items():
             last_step[parameter] = value
 
@@ -80,10 +133,20 @@ class TauLeaping(object):
 
         return propensity_sum, propensities_
 
+    def compute_tau(self, species, model, epsilon):
 
-    def compute_tau(self, species, model, step, epsilon):
+        """
 
-        X = np.array([species[con][step - 1] for con in species.keys() if con != "Time"])
+        Args:
+            species: a dictionary in which the calculated concentrations of the species are stored.
+            model: a class created by "biostoch.model.Model"
+            epsilon: a float value that is less than one and is used as a fixed tolerance for the calculation of tau.
+
+        Returns:
+            tau: a float or an integer, calculated tau.
+        """
+
+        X = np.array([species[con][-1] for con in species.keys() if con != "Time"])
         v = []
 
         for key, val in model.coeffs_.items():
@@ -96,7 +159,7 @@ class TauLeaping(object):
         R = []
 
         comp = model.params
-        X1 = {key: val[step - 1] for key, val in species.items() if key != "Time"}
+        X1 = {key: val[-1] for key, val in species.items() if key != "Time"}
         comp.update(X1)
 
         s = 0
@@ -125,14 +188,27 @@ class TauLeaping(object):
 
         return min(tau_values)
 
+    def compute_lambdas(self, species, parameters, propensities, tau):
 
-    def compute_lambdas(self, species, parameters, propensities, tau, step):
+        """
+
+        Args:
+            species: a dictionary in which the calculated concentrations of the species are stored.
+            parameters: a dictionary in which the rate constants of the model are stored.
+            propensities: a dictionary contains the propensity values of the reactions.
+            tau: a float or an integer that represents the time step size.
+
+        Returns:
+            lambda: calculated poisson distribution parameter (lambda),
+                    (the mean number of events within a given interval of time or space)
+
+        """
 
         last_step = {}
 
         for specie, concentration in species.items():
             if specie != "Time":
-                last_step[specie] = concentration[step - 1]
+                last_step[specie] = concentration[-1]
 
         for parameter, value in parameters.items():
             last_step[parameter] = value
@@ -149,18 +225,37 @@ class TauLeaping(object):
 
         return lambdas
 
-
     def num_reaction(self, lambdas):
+
+        """
+
+        Args: poisson distribution parameter (lambda)
+            lambdas:
+
+        Returns:
+            num_reaction_: a dictionary contains number of times ach reaction occurred in the time interval (tau).
+
+        """
+
         num_reaction_ = {}
         for reaction, lambda_ in lambdas.items():
             num_reaction_[reaction] = np.random.poisson(lambda_)
 
         return num_reaction_
 
+    def update(self, species, model, num_reaction, tau):
 
-    def update(self, species, model, num_reaction, step, tau):
+        """
+        Args:
+            species: a dictionary in which the calculated concentrations of the species are stored.
+            model: a class created by "biostoch.model.Model".
+            num_reaction: an integer value that indicates the number of reaction in the system.
+            tau: a float or an integer, calculated tau.
+        Returns:
+            species: a dictionary in which the calculated concentrations of the species are stored.
+        """
 
-        species["Time"][step] = species["Time"][step - 1] + tau
+        species["Time"].append(species["Time"][-1] + tau)
 
         for reaction, formula in model.reacts_.items():
             split_formula = formula.split()
@@ -175,44 +270,28 @@ class TauLeaping(object):
             component_reaction[component] = num_reaction_
 
         for component, value in component_reaction.items():
-            species[component][step] = species[component][step - 1] + value
+            species[component].append(species[component][-1] + value)
 
         return species
-
-
-    def resize_species(self, species, step):
-
-        if step >= len(species["Time"]):
-
-            new_max_steps = len(species["Time"]) * 2
-
-            for specie, concentration in species.items():
-                pad_width = (0, new_max_steps - len(concentration))
-                species[specie] = np.pad(concentration, pad_width, mode='constant')
-
-        return species
-
-
-    def final_resize_species(self, species, final_step):
-        for specie in species.keys():
-            species[specie] = species[specie][:final_step]
-        return species
-
 
     def simulate(self):
 
+        """Runs the simulation"""
+
         start_simulation = time.time()
 
-        species, parameters = self.initialize_parameters(model=self.model, start=self.start, max_epochs=self.max_epochs)
+        species, parameters = self.initialize_parameters(
+            model=self.model,
+            start=self.start
+        )
 
-        step = 1
-        while step < self.max_epochs:
+        step = 2
+        while species["Time"][-1] <= self.stop:
 
             propensity_sum, propensities_ = self.compute_propensity_sum(
                 species=species,
                 parameters=parameters,
-                propensities=self.model.rates_,
-                step=step
+                propensities=self.model.rates_
             )
 
             if propensity_sum == 0 and self.steady_state:
@@ -220,7 +299,11 @@ class TauLeaping(object):
                 break
 
             if self.call_tau:
-                tau = self.compute_tau(species=species, model=self.model, step=step, epsilon=self.epsilon)
+                tau = self.compute_tau(
+                    species=species,
+                    model=self.model,
+                    epsilon=self.epsilon
+                )
             else:
                 tau = self.tau
 
@@ -228,8 +311,7 @@ class TauLeaping(object):
                 species=species,
                 parameters=self.model.params,
                 propensities=self.model.rates_,
-                tau=tau,
-                step=step
+                tau=tau
             )
 
             num_reaction = self.num_reaction(
@@ -240,21 +322,13 @@ class TauLeaping(object):
                 species=species,
                 model=self.model,
                 num_reaction=num_reaction,
-                step=step,
                 tau=tau
             )
 
             step += 1
-
-            species = self.resize_species(
-                species=species,
-                step=step
-            )
-
-        species = self.final_resize_species(
-            species=species,
-            final_step=step
-        )
+            if step == self.max_epochs:
+                print(f"Simulation reached the maximum iteration (max_epochs={self.max_epochs})!")
+                break
 
         self.species = species
         self.parameters = parameters
