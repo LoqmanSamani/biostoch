@@ -16,5 +16,3 @@ biostoch.egg-info/SOURCES.txt
 biostoch.egg-info/dependency_links.txt
 biostoch.egg-info/requires.txt
 biostoch.egg-info/top_level.txt
-examples/simple_model.py
-examples/ssa.py

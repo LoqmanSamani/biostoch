@@ -1,14 +1,6 @@
 
 # BioStoch
-![Static Badge](https://img.shields.io/badge/license-MIT-red?style=plastic)
-![PyPI - Version](https://img.shields.io/pypi/v/biostoch?style=plastic)
-![Static Badge](https://img.shields.io/badge/python-blue?style=plastic&logo=python&logoColor=white)
-![Static Badge](https://img.shields.io/badge/numpy-midnightblue?style=plastic&logo=NumPy)
-![Static Badge](https://img.shields.io/badge/matplotlib-yellow?style=plastic&logo=seaborn&logoColor=white)
-
-
-![ssa1.png](https://github.com/LoqmanSamani/biostoch/blob/systembiology/examples/plots/ssa1.png)
-<p><i>Simulated with GillespySimulator: Concentration trajectories of species A and B over time. Ten independent simulations were performed, each represented by a different line color<i></p>
+<p><b>Simulation in Systems Biology<b></p>
 
 
 ### Overview

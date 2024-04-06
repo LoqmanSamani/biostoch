@@ -2,7 +2,6 @@ import numpy as np
 import time
 
 
-
 class ChemicalLangevin(object):
 
     """ Simulation using Chemical Langevin Equation """
@@ -14,7 +13,8 @@ class ChemicalLangevin(object):
         stop=10.0,
         max_epochs=100,
         seed=42,
-        steady_state=None,
+        steady_state=False,
+        model_name="Chemical Langevin Equation",
         **kwargs
     ):
 
@@ -24,6 +24,7 @@ class ChemicalLangevin(object):
         self.max_epochs = max_epochs
         self.seed = seed
         self.steady_state = steady_state
+        self.model_name = model_name
 
         self.tau = (self.stop - self.start) / self.max_epochs
 
@@ -33,39 +34,83 @@ class ChemicalLangevin(object):
         else:
             raise ValueError("Before simulating a model, please ensure that you have instantiated the biostoch.model.Model() object.")
 
-        self.model_name = "Chemical Langevin Equation"
-        self.species = None
-        self.parameters = None
+        self.species = {}
+        self.parameters = {}
         self.time = {}
+
+        """
+        Args:
+            model: a class created by "biostoch.model.Model",
+                   contains all necessary information used in simulation with SSA.
+            start: an integer or a float that defines the start time of the simulation.
+            stop: an integer or a float that defines the stop time of the simulation.
+            max_epochs: an integer defines the maximum number of iterations.
+            seed: an integer parameter used to initialize the random number generator.
+            steady_state: Boolean value (True or False); if true, 
+                          the simulation is stopped as soon as the model has reached the steady state.
+            model_name: the name of the simulation method "Tau-Leaping Algorithm".
+            **kwargs: a special parameter that allows passing additional keyword arguments to the function.
+            tau: a float or an integer that represents the time step size.
+            
+            species: an empty dictionary in which the calculated concentrations of the species are stored.
+            parameters: an empty dictionary in which the rate constants of the model are stored.
+            time: an empty dictionary in which the simulation duration is stored. 
+        """
 
 
     def reset(self):
-        self.species = None
-        self.parameters = None
+
+        """ Resets the model species and parameters dictionaries"""
+
+        self.species = {}
+        self.parameters = {}
         self.time = {}
 
+    def initialize_parameters(self, model, start):
 
-    def initialize_parameters(self, model, start, max_epochs):
+        """
+        Initializes the model species dictionary
+
+        Args:
+            model: a class created by "biostoch.model.Model"
+                   contains all necessary information used in simulation with SSA.
+            start: an integer or a float that defines the start time of the simulation.
+        Returns:
+            species: a dictionary contains initialized concentration of each
+                     species and also initialized simulation time in the system.
+                     each dictionary's key is the name of one species
+                     and each value the corresponding initialized concentration.
+            parameters: a dictionary contains the rate constant of each reaction each key
+                        correspond to the name of the rate constant and each value is its value.
+        """
 
         species = {}
         parameters = {}
 
-        species["Time"] = np.zeros(max_epochs)
-        species["Time"][0] = start
+        species["Time"] = [start]
+
         for specie in model.components:
-            species[specie] = np.zeros(max_epochs)
-            if getattr(model, specie) != 0:
-                species[specie][0] = getattr(model, specie)
-            else:
-                species[specie][0] = getattr(model, specie)
+            species[specie] = [getattr(model, specie)]
 
         for parameter in self.model.params:
             parameters[parameter] = getattr(model, parameter)
 
         return species, parameters
 
+    def compute_change(self, model, species, tau):
 
-    def compute_change(self, model, species, tau, step):
+        """
+
+        Args:
+            model: a class created by "biostoch.model.Model"
+            species: a dictionary in which the calculated concentrations of the species are stored.
+            tau: a float or an integer, calculated tau.
+
+        Returns:
+            changes: a dictionary stores the computed changes in the concentrations
+                     of species due to each reaction during the time step (tau)(without noise).
+            terms: a dictionary is used to collect the terms needed for evaluating the rates of reactions.
+        """
 
         changes = {}
         terms = {}
@@ -74,15 +119,26 @@ class ChemicalLangevin(object):
             terms[parameters] = value
 
         for specie, concentration in species.items():
-            terms[specie] = concentration[step - 1]
+            terms[specie] = concentration[-1]
 
         for reaction, rate in model.rates_.items():
             changes[reaction] = eval(rate, terms) * tau
 
         return changes, terms
 
-
     def compute_noise(self, model, terms, tau):
+
+        """
+
+        Args:
+            model: a class created by "biostoch.model.Model"
+            terms: a dictionary is used to collect the terms needed for evaluating the rates of reactions.
+            tau: a float or an integer, calculated tau.
+
+        Returns:
+            noises: a dictionary contains computed noise terms for each reaction in the system.
+
+        """
 
         noises = {}
 
@@ -92,8 +148,19 @@ class ChemicalLangevin(object):
 
         return noises
 
-
     def compute_changes(self, noises, changes):
+
+        """
+
+        Args:
+            noises: a dictionary contains computed noise terms for each reaction in the system.
+            changes: a dictionary stores the computed changes in the concentrations
+                     of species due to each reaction during the time step (tau) (without noise).
+
+        Returns:
+            changes: a dictionary stores the computed changes in the concentrations
+                     of species due to each reaction during the time step (tau) (witt noise).
+        """
 
         changes_ = {}
 
@@ -102,10 +169,20 @@ class ChemicalLangevin(object):
 
         return changes_
 
+    def update(self, species, model, changes_, tau):
 
-    def update(self, species, model, changes_, step, tau):
+        """
+        Args:
+            species: a dictionary in which the calculated concentrations of the species are stored.
+            model: a class created by "biostoch.model.Model".
+            changes_: a dictionary stores the computed changes in the concentrations
+                     of species due to each reaction during the time step (tau).
+            tau: a float or an integer, calculated tau.
+        Returns:
+            species: a dictionary in which the calculated concentrations of the species are stored.
+        """
 
-        species["Time"][step] = species["Time"][step - 1] + tau
+        species["Time"].append(species["Time"][-1] + tau)
 
         for reaction, formula in model.reacts_.items():
             split_formula = formula.split()
@@ -122,48 +199,28 @@ class ChemicalLangevin(object):
             component_reaction[component] = num_reaction_
 
         for component, value in component_reaction.items():
-            species[component][step] = species[component][step - 1] + value
+            species[component].append(species[component][-1] + value)
 
         return species
-
-
-    def resize_species(self, species, step):
-
-        if step >= len(species["Time"]):
-
-            new_max_steps = len(species["Time"]) * 2
-
-            for specie, concentration in species.items():
-                pad_width = (0, new_max_steps - len(concentration))
-                species[specie] = np.pad(concentration, pad_width, mode='constant')
-
-        return species
-
-
-    def final_resize_species(self, species, final_step):
-        for specie in species.keys():
-            species[specie] = species[specie][:final_step]
-        return species
-
 
     def simulate(self):
+
+        """Runs the simulation"""
 
         start_simulation = time.time()
 
         species, parameters = self.initialize_parameters(
             model=self.model,
-            start=self.start,
-            max_epochs=self.max_epochs
+            start=self.start
         )
 
-        step = 1
-        while species["Time"][step] < self.stop and step < self.max_epochs:
+        step = 2
+        while species["Time"][-1] <= self.stop:
 
             changes, terms = self.compute_change(
                 model=self.model,
                 species=species,
-                tau=self.tau,
-                step=step
+                tau=self.tau
             )
 
             noises = self.compute_noise(
@@ -181,27 +238,16 @@ class ChemicalLangevin(object):
                 species=species,
                 model=self.model,
                 changes_=changes_,
-                step=step,
                 tau=self.tau
             )
 
             step += 1
-
-            species = self.resize_species(
-                species=species,
-                step=step
-            )
-
-        species = self.final_resize_species(
-            species=species,
-            final_step=step
-        )
+            if step == self.max_epochs:
+                print(f"Simulation reached the maximum iteration (max_epochs={self.max_epochs})!")
+                break
 
         self.species = species
         self.parameters = parameters
         stop_simulation = time.time()
         self.time["Simulation Duration"] = stop_simulation - start_simulation
-
-
-
 
