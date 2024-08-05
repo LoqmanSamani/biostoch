@@ -75,7 +75,7 @@ euler_model = EulerSimulator(
     epochs=1000
 )
 euler_model.reset()  # Reset the model to initialize if it has been used before
-euler_model.population_simulation()  # Simulate the model 
+euler_model.individual_simulation()  # Simulate the model 
 euler_model.species  # Print the model species after the simulation, a dictionary containing the change in species concentration during the simulation time
 euler_model.time  # Show how long the simulation took to complete
 
@@ -87,7 +87,7 @@ runge_model = RungeKuttaSimulator(
     epochs=1000
 )
 
-runge_model.population_simulation()
+runge_model.individual_simulation()
 runge_model.species
 runge_model.time
 
@@ -99,7 +99,7 @@ ssa_model = GillespieSimulator(
     max_epochs=1000
 )
 
-ssa_model.population_simulation()
+ssa_model.individual_simulation()
 ssa_model.species
 ssa_model.time
 
@@ -111,7 +111,7 @@ tau_model = TauLeaping(
     max_epochs=100
 )
 
-tau_model.population_simulation()
+tau_model.individual_simulation()
 tau_model.species
 tau_model.time
 
@@ -123,7 +123,7 @@ cle_model = ChemicalLangevin(
     max_epochs=1000
 )
 
-cle_model.population_simulation()
+cle_model.individual_simulation()
 cle_model.species
 cle_model.time
 

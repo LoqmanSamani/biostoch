@@ -109,7 +109,7 @@ def ode_simulator(sp1_0, sp2_0, k_1, k_2, t_0, t_end, num_steps):
     # Make sure to reset the model
     model.reset()
     # Run the simulation
-    result = model.population_simulation(t_0)
+    result = model.individual_simulation(t_0)
 
 
     # Separate the generated populations from each other

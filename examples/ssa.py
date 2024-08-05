@@ -18,7 +18,7 @@ simulations = []
 for _ in range(num_simulations):
     model = GillespieSimulator(model=obj, start=0, stop=100, max_epochs=1000)
     model.reset()
-    model.population_simulation()
+    model.individual_simulation()
     simulations.append(model.species)
 
 # Plot all simulations on the same plot
